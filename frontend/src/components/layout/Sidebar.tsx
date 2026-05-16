@@ -1,0 +1,120 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import {
+  LayoutDashboard, Users, Briefcase, Megaphone,
+  CheckSquare, Calendar, BarChart, Settings, LogOut, Zap
+} from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+
+const menuItems = [
+  { icon: LayoutDashboard, label: 'Dashboard',   href: '/dashboard' },
+  { icon: Megaphone,       label: 'Campaigns',   href: '/dashboard/campaigns' },
+  { icon: Users,           label: 'Influencers', href: '/dashboard/influencers' },
+  { icon: Briefcase,       label: 'Clients',     href: '/dashboard/clients' },
+  { icon: CheckSquare,     label: 'Tasks',       href: '/dashboard/tasks' },
+  { icon: Calendar,        label: 'Calendar',    href: '/dashboard/calendar' },
+  { icon: BarChart,        label: 'Reports',     href: '/dashboard/reports' },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
+
+  const isActive = (href: string) =>
+    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch { /* backend may be offline */ }
+    logout();
+    router.push('/login');
+  };
+
+  return (
+    <aside className="w-64 h-screen bg-card/80 border-r border-border/50 flex flex-col fixed left-0 top-0 backdrop-blur-xl z-40">
+      {/* Logo */}
+      <div className="p-6 border-b border-border/30">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+            <Zap size={16} className="text-white" fill="white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-gradient">DREX OS</h2>
+            <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate max-w-[120px]">
+              {user?.agencyId ? 'Agency Workspace' : 'Agency Workspace'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
+                active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
+            >
+              {active && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute inset-0 bg-primary/15 rounded-xl border border-primary/25"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+              <Icon size={18} className={`relative z-10 transition-colors ${active ? 'text-primary' : 'group-hover:text-foreground'}`} />
+              <span className="relative z-10 font-medium text-sm">{item.label}</span>
+              {active && <div className="relative z-10 ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User + Bottom */}
+      <div className="p-3 border-t border-border/30 space-y-1">
+        {/* User profile strip */}
+        {user && (
+          <div className="flex items-center gap-2.5 px-4 py-2.5 mb-1 rounded-xl bg-white/3">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {user.firstName?.[0] ?? 'U'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
+              <p className="text-[10px] text-muted-foreground capitalize">{user.role?.replace('_', ' ').toLowerCase()}</p>
+            </div>
+          </div>
+        )}
+
+        <Link
+          href="/dashboard/settings"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+        >
+          <Settings size={18} />
+          <span className="font-medium text-sm">Settings</span>
+        </Link>
+
+        <button
+          id="sidebar-logout"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+        >
+          <LogOut size={18} />
+          <span className="font-medium text-sm">Logout</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
