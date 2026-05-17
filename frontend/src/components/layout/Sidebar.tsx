@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -35,7 +36,7 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:5000/api/auth/logout', {
+      await fetch('${API_URL}/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });

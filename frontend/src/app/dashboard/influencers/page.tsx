@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Filter, Mail, MessageCircle, MoreVertical, X, Sparkles, Loader2, MessageSquare, Send, Star } from 'lucide-react';
@@ -30,7 +31,7 @@ export default function InfluencersPage() {
   const fetchInfluencers = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/influencers', {
+      const res = await fetch('${API_URL}/api/influencers', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -51,7 +52,7 @@ export default function InfluencersPage() {
   const fetchWaHistory = async (phone: string) => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch(`http://localhost:5000/api/whatsapp/history?phoneNumber=${encodeURIComponent(phone)}`, {
+      const res = await fetch(`${API_URL}/api/whatsapp/history?phoneNumber=${encodeURIComponent(phone)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setWaHistory(await res.json());
@@ -70,7 +71,7 @@ export default function InfluencersPage() {
     setSendingWa(true);
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/whatsapp/send', {
+      const res = await fetch('${API_URL}/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ to: '+1234567890', body: waMessage }) // Placeholder to number
@@ -98,7 +99,7 @@ export default function InfluencersPage() {
         rating: newInf.rating
       };
 
-      const res = await fetch('http://localhost:5000/api/influencers', {
+      const res = await fetch('${API_URL}/api/influencers', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

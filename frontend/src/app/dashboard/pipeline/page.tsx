@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, DollarSign, TrendingUp, Trophy, XCircle, Phone, Mail, FileText } from 'lucide-react';
@@ -43,24 +44,24 @@ export default function PipelinePage() {
   };
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/pipeline', { headers: getHeaders() })
+    fetch('${API_URL}/api/pipeline', { headers: getHeaders() })
       .then(r => r.json()).then(setLeads).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('http://localhost:5000/api/pipeline', { method: 'POST', headers: getHeaders(), body: JSON.stringify(form) });
+    const res = await fetch('${API_URL}/api/pipeline', { method: 'POST', headers: getHeaders(), body: JSON.stringify(form) });
     if (res.ok) { const d = await res.json(); setLeads(p => [d, ...p]); setShowModal(false); setForm({ companyName: '', contactName: '', email: '', phone: '', value: '', stage: 'LEAD', notes: '' }); }
   };
 
   const moveToStage = async (leadId: string, newStage: Stage) => {
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, stage: newStage } : l));
-    await fetch(`http://localhost:5000/api/pipeline/${leadId}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ stage: newStage }) });
+    await fetch(`${API_URL}/api/pipeline/${leadId}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ stage: newStage }) });
   };
 
   const deleteLead = async (id: string) => {
     if (!confirm('Delete this lead?')) return;
-    await fetch(`http://localhost:5000/api/pipeline/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/api/pipeline/${id}`, { method: 'DELETE', headers: getHeaders() });
     setLeads(p => p.filter(l => l.id !== id));
   };
 

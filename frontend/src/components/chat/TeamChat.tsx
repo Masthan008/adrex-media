@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Loader2, Minimize2, Users, User, Bot, Sparkles } from 'lucide-react';
@@ -75,7 +76,7 @@ export default function TeamChat() {
   const fetchTeamMembers = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/team', {
+      const res = await fetch('${API_URL}/api/team', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -95,7 +96,7 @@ export default function TeamChat() {
 
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch(`http://localhost:5000/api/messages/${member.id}`, {
+      const res = await fetch(`${API_URL}/api/messages/${member.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -125,7 +126,7 @@ export default function TeamChat() {
     } else if (mode === 'private' && selectedUser) {
       const token = localStorage.getItem('adrex_token');
       try {
-        const res = await fetch('http://localhost:5000/api/messages', {
+        const res = await fetch('${API_URL}/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ receiverId: selectedUser.id, content: input }),
@@ -152,7 +153,7 @@ export default function TeamChat() {
 
       try {
         const token = localStorage.getItem('adrex_token');
-        const res = await fetch('http://localhost:5000/api/ai/chat', {
+        const res = await fetch('${API_URL}/api/ai/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ prompt: input }),

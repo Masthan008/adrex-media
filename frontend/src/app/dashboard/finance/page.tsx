@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, DollarSign, TrendingUp, TrendingDown, Receipt, CreditCard, Trash2, Download } from 'lucide-react';
@@ -41,9 +42,9 @@ export default function FinancePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:5000/api/finance/invoices', { headers: getHeaders() }).then(r => r.json()),
-      fetch('http://localhost:5000/api/finance/expenses', { headers: getHeaders() }).then(r => r.json()),
-      fetch('http://localhost:5000/api/clients', { headers: getHeaders() }).then(r => r.json()),
+      fetch('${API_URL}/api/finance/invoices', { headers: getHeaders() }).then(r => r.json()),
+      fetch('${API_URL}/api/finance/expenses', { headers: getHeaders() }).then(r => r.json()),
+      fetch('${API_URL}/api/clients', { headers: getHeaders() }).then(r => r.json()),
     ]).then(([inv, exp, cls]) => {
       setInvoices(Array.isArray(inv) ? inv : []);
       setExpenses(Array.isArray(exp) ? exp : []);
@@ -58,30 +59,30 @@ export default function FinancePage() {
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('http://localhost:5000/api/finance/invoices', { method: 'POST', headers: getHeaders(), body: JSON.stringify(invoiceForm) });
+    const res = await fetch('${API_URL}/api/finance/invoices', { method: 'POST', headers: getHeaders(), body: JSON.stringify(invoiceForm) });
     if (res.ok) { const d = await res.json(); setInvoices(p => [d, ...p]); setShowModal(false); setInvoiceForm({ clientId: '', amount: '', status: 'DRAFT', dueDate: '' }); }
   };
 
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('http://localhost:5000/api/finance/expenses', { method: 'POST', headers: getHeaders(), body: JSON.stringify(expenseForm) });
+    const res = await fetch('${API_URL}/api/finance/expenses', { method: 'POST', headers: getHeaders(), body: JSON.stringify(expenseForm) });
     if (res.ok) { const d = await res.json(); setExpenses(p => [d, ...p]); setShowModal(false); setExpenseForm({ category: '', amount: '', description: '', date: '' }); }
   };
 
   const deleteInvoice = async (id: string) => {
     if (!confirm('Delete invoice?')) return;
-    await fetch(`http://localhost:5000/api/finance/invoices/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/api/finance/invoices/${id}`, { method: 'DELETE', headers: getHeaders() });
     setInvoices(p => p.filter(i => i.id !== id));
   };
 
   const deleteExpense = async (id: string) => {
     if (!confirm('Delete expense?')) return;
-    await fetch(`http://localhost:5000/api/finance/expenses/${id}`, { method: 'DELETE', headers: getHeaders() });
+    await fetch(`${API_URL}/api/finance/expenses/${id}`, { method: 'DELETE', headers: getHeaders() });
     setExpenses(p => p.filter(e => e.id !== id));
   };
 
   const updateInvoiceStatus = async (id: string, status: string) => {
-    const res = await fetch(`http://localhost:5000/api/finance/invoices/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
+    const res = await fetch(`${API_URL}/api/finance/invoices/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
     if (res.ok) { const d = await res.json(); setInvoices(p => p.map(i => i.id === id ? d : i)); }
   };
 
@@ -147,7 +148,7 @@ export default function FinancePage() {
                   </td>
                   <td className="px-6 py-4 text-zinc-400 text-xs">{new Date(inv.dueDate).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => window.open(`http://localhost:5000/api/pdf/invoice/${inv.id}`, '_blank')} className="p-2 rounded-lg text-zinc-600 hover:bg-blue-500/10 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all mr-1"><Download size={16} /></button>
+                    <button onClick={() => window.open(`${API_URL}/api/pdf/invoice/${inv.id}`, '_blank')} className="p-2 rounded-lg text-zinc-600 hover:bg-blue-500/10 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all mr-1"><Download size={16} /></button>
                     <button onClick={() => deleteInvoice(inv.id)} className="p-2 rounded-lg text-zinc-600 hover:bg-red-500/10 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                   </td>
                 </tr>

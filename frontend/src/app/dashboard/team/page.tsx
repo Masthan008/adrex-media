@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, MoreHorizontal, User, Shield, ShieldAlert, Mail, Trash2, X } from 'lucide-react';
@@ -33,7 +34,7 @@ export default function TeamPage() {
   const fetchTeam = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/team', {
+      const res = await fetch('${API_URL}/api/team', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -54,7 +55,7 @@ export default function TeamPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/team', {
+      const res = await fetch('${API_URL}/api/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(newMember)
@@ -77,7 +78,7 @@ export default function TeamPage() {
     if (!confirm('Are you sure you want to remove this team member?')) return;
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch(`http://localhost:5000/api/team/${id}`, {
+      const res = await fetch(`${API_URL}/api/team/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

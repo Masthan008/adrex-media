@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, MoreHorizontal, Briefcase, Mail, Phone, DollarSign, X, Building2 } from 'lucide-react';
@@ -25,7 +26,7 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/clients', {
+      const res = await fetch('${API_URL}/api/clients', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -49,7 +50,7 @@ export default function ClientsPage() {
 
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/clients', {
+      const res = await fetch('${API_URL}/api/clients', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

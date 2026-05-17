@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart2, TrendingUp, Users, Megaphone, Download, FileText, PieChart, Activity } from 'lucide-react';
@@ -54,7 +55,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('adrex_token');
-    fetch('http://localhost:5000/api/stats/reports', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('${API_URL}/api/stats/reports', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => { if (d) setStats(d); }).catch(console.error);
   }, []);
 
@@ -65,7 +66,7 @@ export default function ReportsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Reports & Analytics</h1>
           <p className="text-muted-foreground mt-1">Performance overview and business insights.</p>
         </div>
-        <button onClick={() => window.open('http://localhost:5000/api/pdf/report', '_blank')} className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all text-sm">
+        <button onClick={() => window.open('${API_URL}/api/pdf/report', '_blank')} className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all text-sm">
           <Download size={16} /> Export PDF
         </button>
       </div>

@@ -1,3 +1,4 @@
+import { API_URL } from '@/lib/api';
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 
@@ -16,7 +17,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     const currentSocket = get().socket;
     if (currentSocket?.connected) return;
 
-    const socket = io('http://localhost:5000', {
+    const socket = io(API_URL, {
       auth: { token },
       transports: ['websocket'],
       autoConnect: true,

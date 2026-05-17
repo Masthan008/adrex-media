@@ -6,6 +6,7 @@ import {
   User, Building2, CreditCard, Bell, Shield,
   Save, Camera, Check, ChevronRight, Settings
 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useSearchParams } from 'next/navigation';
 
@@ -108,7 +109,7 @@ function SettingsContent() {
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
       if (activeTab === 'profile') {
-        const res = await fetch('http://localhost:5000/api/user/profile', {
+        const res = await fetch(`${API_URL}/api/user/profile`, {
           method: 'PUT',
           headers,
           body: JSON.stringify({ firstName: profile.firstName, lastName: profile.lastName, bio: profile.bio, phone: profile.phone })
@@ -118,7 +119,7 @@ function SettingsContent() {
           setUser(updatedUser);
         }
       } else if (activeTab === 'agency') {
-        await fetch('http://localhost:5000/api/agency', {
+        await fetch(`${API_URL}/api/agency`, {
           method: 'PUT',
           headers,
           body: JSON.stringify(agency)
@@ -132,7 +133,7 @@ function SettingsContent() {
           alert('New passwords do not match');
           return;
         }
-        const res = await fetch('http://localhost:5000/api/auth/change-password', {
+        const res = await fetch(`${API_URL}/api/auth/change-password`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPass })
@@ -160,7 +161,7 @@ function SettingsContent() {
     const fetchAgency = async () => {
       try {
         const token = localStorage.getItem('adrex_token');
-        const res = await fetch('http://localhost:5000/api/agency', {
+        const res = await fetch(`${API_URL}/api/agency`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Mail, Lock, User, Building2, Loader2 } from 'lucide-react';
@@ -27,7 +28,7 @@ export default function SignupPage() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/signup', {
+      const res = await fetch('${API_URL}/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

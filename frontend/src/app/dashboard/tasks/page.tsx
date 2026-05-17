@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, CheckSquare, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -40,7 +41,7 @@ export default function TasksPage() {
   const fetchTasks = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/tasks', {
+      const res = await fetch('${API_URL}/api/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -64,7 +65,7 @@ export default function TasksPage() {
 
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/tasks', {
+      const res = await fetch('${API_URL}/api/tasks', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ export default function TasksPage() {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     try {
       const token = localStorage.getItem('adrex_token');
-      await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+      await fetch(`${API_URL}/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus })

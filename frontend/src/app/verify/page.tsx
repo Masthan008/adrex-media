@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -21,7 +22,7 @@ function VerifyEmailContent() {
 
     const verify = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/auth/verify-email', {
+        const res = await fetch('${API_URL}/api/auth/verify-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token })

@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Megaphone, Users, Briefcase, DollarSign,
   TrendingUp, Activity, ArrowUpRight, Zap, Bell, ChevronRight, Sparkles
 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -43,7 +44,7 @@ function DashboardContent() {
   useEffect(() => {
     const token = localStorage.getItem('adrex_token');
     if (!token) { router.push('/login'); return; }
-    fetch('http://localhost:5000/api/stats/dashboard', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${API_URL}/api/stats/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => { if (d && !d.error) setStats(d); })
       .catch(console.error).finally(() => setLoading(false));
   }, [router]);

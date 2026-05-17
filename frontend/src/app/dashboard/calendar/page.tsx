@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
@@ -37,7 +38,7 @@ export default function CalendarPage() {
   const fetchEvents = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/calendar', {
+      const res = await fetch('${API_URL}/api/calendar', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -61,7 +62,7 @@ export default function CalendarPage() {
 
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/calendar', {
+      const res = await fetch('${API_URL}/api/calendar', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

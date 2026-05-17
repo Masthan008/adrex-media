@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Zap, FileText, MessageSquare, Loader2, Copy, Check, Lightbulb, Target, PenTool } from 'lucide-react';
@@ -34,7 +35,7 @@ export default function AIToolsPage() {
         outreach: '/api/ai/outreach',
         strategy: '/api/ai/strategy',
       };
-      const res = await fetch(`http://localhost:5000${endpointMap[activeTool]}`, {
+      const res = await fetch(`${API_URL}${endpointMap[activeTool]}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ prompt, brief: prompt, context: prompt })

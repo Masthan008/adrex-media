@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, FileText, Image as ImageIcon, File, Loader2, Download, Trash2, Search, Filter } from 'lucide-react';
@@ -28,7 +29,7 @@ export default function FilesPage() {
   const fetchFiles = async () => {
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/files', {
+      const res = await fetch('${API_URL}/api/files', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setFiles(await res.json());
@@ -55,7 +56,7 @@ export default function FilesPage() {
 
     try {
       const token = localStorage.getItem('adrex_token');
-      const res = await fetch('http://localhost:5000/api/files/upload', {
+      const res = await fetch('${API_URL}/api/files/upload', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -161,7 +162,7 @@ export default function FilesPage() {
                 </div>
                 <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
                   <a 
-                    href={`http://localhost:5000${file.url}`} 
+                    href={`${API_URL}${file.url}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white"
