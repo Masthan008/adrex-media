@@ -34,6 +34,7 @@ export default function FinancePage() {
 
   const [invoiceForm, setInvoiceForm] = useState({ clientId: '', amount: '', status: 'DRAFT', dueDate: '' });
   const [expenseForm, setExpenseForm] = useState({ category: '', amount: '', description: '', date: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   const getHeaders = () => {
     const token = localStorage.getItem('adrex_token');
@@ -59,14 +60,26 @@ export default function FinancePage() {
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch(`${API_URL}/api/finance/invoices`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(invoiceForm) });
-    if (res.ok) { const d = await res.json(); setInvoices(p => [d, ...p]); setShowModal(false); setInvoiceForm({ clientId: '', amount: '', status: 'DRAFT', dueDate: '' }); }
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/finance/invoices`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(invoiceForm) });
+      if (res.ok) { const d = await res.json(); setInvoices(p => [d, ...p]); setShowModal(false); setInvoiceForm({ clientId: '', amount: '', status: 'DRAFT', dueDate: '' }); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch(`${API_URL}/api/finance/expenses`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(expenseForm) });
-    if (res.ok) { const d = await res.json(); setExpenses(p => [d, ...p]); setShowModal(false); setExpenseForm({ category: '', amount: '', description: '', date: '' }); }
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/finance/expenses`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(expenseForm) });
+      if (res.ok) { const d = await res.json(); setExpenses(p => [d, ...p]); setShowModal(false); setExpenseForm({ category: '', amount: '', description: '', date: '' }); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const deleteInvoice = async (id: string) => {
@@ -79,6 +92,11 @@ export default function FinancePage() {
     if (!confirm('Delete expense?')) return;
     await fetch(`${API_URL}/api/finance/expenses/${id}`, { method: 'DELETE', headers: getHeaders() });
     setExpenses(p => p.filter(e => e.id !== id));
+  };
+
+  const getPdfUrl = (path: string) => {
+    const token = localStorage.getItem('adrex_token');
+    return `${API_URL}${path}?token=${token}`;
   };
 
   const updateInvoiceStatus = async (id: string, status: string) => {
@@ -148,7 +166,7 @@ export default function FinancePage() {
                   </td>
                   <td className="px-6 py-4 text-zinc-400 text-xs">{new Date(inv.dueDate).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => window.open(`${API_URL}/api/pdf/invoice/${inv.id}`, '_blank')} className="p-2 rounded-lg text-zinc-600 hover:bg-blue-500/10 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all mr-1"><Download size={16} /></button>
+                    <button onClick={() => window.open(getPdfUrl(`/api/pdf/invoice/${inv.id}`), '_blank')} className="p-2 rounded-lg text-zinc-600 hover:bg-blue-500/10 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all mr-1"><Download size={16} /></button>
                     <button onClick={() => deleteInvoice(inv.id)} className="p-2 rounded-lg text-zinc-600 hover:bg-red-500/10 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                   </td>
                 </tr>
@@ -190,7 +208,7 @@ export default function FinancePage() {
       <AnimatePresence>
         {showModal && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowModal(false); setSubmitting(false); }} />
             <motion.div className="relative z-10 w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-6" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">{tab === 'invoices' ? 'New Invoice' : 'Add Expense'}</h2>
@@ -216,7 +234,9 @@ export default function FinancePage() {
                   </div>
                   <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
                     <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-zinc-400">Cancel</button>
-                    <button type="submit" className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90">Create Invoice</button>
+                    <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {submitting ? 'Creating...' : 'Create Invoice'}
+                    </button>
                   </div>
                 </form>
               ) : (
@@ -234,7 +254,9 @@ export default function FinancePage() {
                     <input type="date" value={expenseForm.date} onChange={e => setExpenseForm(p => ({...p, date: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>
                   <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
                     <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-zinc-400">Cancel</button>
-                    <button type="submit" className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90">Add Expense</button>
+                    <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {submitting ? 'Adding...' : 'Add Expense'}
+                    </button>
                   </div>
                 </form>
               )}
