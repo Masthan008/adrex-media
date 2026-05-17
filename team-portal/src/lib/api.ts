@@ -1,6 +1,6 @@
 import { API_URL } from './config';
 
-const BASE = `${BASE}/api`;
+const BASE = `${API_URL}/api`;
 
 export const getHeaders = () => {
   const token = localStorage.getItem('adrex_token');
