@@ -45,7 +45,8 @@ export default function LoginPage() {
       if (data.token) localStorage.setItem('adrex_token', data.token);
 
       setUser(data.user);
-      router.push('/dashboard');
+      // Hard redirect to ensure auth store rehydrates before AuthGuard checks
+      window.location.href = '/dashboard';
     } catch (err) {
       setError('Cannot connect to server. Make sure the backend is running.');
     } finally {

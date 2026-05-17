@@ -63,23 +63,25 @@ export const signup = async (req: Request, res: Response) => {
       return { agency, user };
     });
 
-    // Send verification email
+    // Send verification email (non-blocking)
     const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify?token=${result.user.emailVerificationToken}`;
-    try {
-      await transporter.sendMail({
-        from: '"Adrex Media OS" <noreply@adrexmedia.com>',
-        to: result.user.email,
-        subject: 'Verify Your Email — Adrex Media',
-        html: `
-          <h3>Welcome to Adrex Media!</h3>
-          <p>Click the link below to verify your email address:</p>
-          <a href="${verifyUrl}">Verify Email</a>
-          <p>If you did not create an account, please ignore this email.</p>
-        `
-      });
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-    }
+    setImmediate(async () => {
+      try {
+        await transporter.sendMail({
+          from: '"Drex Media" <noreply@drexmedia.com>',
+          to: result.user.email,
+          subject: 'Verify Your Email — Drex Media',
+          html: `
+            <h3>Welcome to Drex Media!</h3>
+            <p>Click the link below to verify your email address:</p>
+            <a href="${verifyUrl}">Verify Email</a>
+            <p>If you did not create an account, please ignore this email.</p>
+          `
+        });
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+      }
+    });
 
     const token = jwt.sign(
       { userId: result.user.id, agencyId: result.agency.id, role: result.user.role },
@@ -91,7 +93,7 @@ export const signup = async (req: Request, res: Response) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     res.status(201).json({

@@ -3,7 +3,7 @@
 import { API_URL } from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Loader2, Minimize2, Users, User, Bot, Sparkles } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, Minimize2, Users, User, Bot, Sparkles, ArrowLeft } from 'lucide-react';
 import { useSocketStore } from '@/store/socketStore';
 import { useAuthStore } from '@/store/authStore';
 
@@ -90,7 +90,6 @@ export default function TeamChat() {
 
   const selectPrivateChat = async (member: TeamMember) => {
     setSelectedUser(member);
-    setMode('private');
     setMessages([]);
     setLoading(true);
 
@@ -118,9 +117,10 @@ export default function TeamChat() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !socket || !isConnected) return;
+    if (!input.trim()) return;
 
     if (mode === 'team') {
+      if (!socket || !isConnected) return;
       socket.emit('send_team_message', { text: input });
       setInput('');
     } else if (mode === 'private' && selectedUser) {
@@ -140,7 +140,9 @@ export default function TeamChat() {
             content: msg.content,
             createdAt: msg.createdAt,
           }]);
-          socket.emit('send_private_message', { receiverId: selectedUser.id, content: input });
+          if (socket && isConnected) {
+            socket.emit('send_private_message', { receiverId: selectedUser.id, content: input });
+          }
           setInput('');
         }
       } catch (error) {
@@ -189,12 +191,31 @@ export default function TeamChat() {
     return msg.senderId === user?.id;
   };
 
+  const openChat = () => {
+    setIsOpen(true);
+    if (mode === 'private' && !selectedUser) {
+      fetchTeamMembers();
+    }
+  };
+
+  const switchMode = (newMode: ChatMode) => {
+    setMode(newMode);
+    if (newMode === 'private') {
+      setSelectedUser(null);
+      setMessages([]);
+      fetchTeamMembers();
+    } else {
+      setSelectedUser(null);
+      setMessages([]);
+    }
+  };
+
   return (
     <>
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => { setIsOpen(true); if (mode === 'private') fetchTeamMembers(); }}
+        onClick={openChat}
         className={`fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white flex items-center justify-center shadow-2xl z-40 ${isOpen ? 'hidden' : 'block'}`}
       >
         <MessageSquare size={24} />
@@ -211,6 +232,11 @@ export default function TeamChat() {
           >
             <div className="p-4 border-b border-white/10 bg-zinc-900/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
+                {mode === 'private' && selectedUser && (
+                  <button onClick={() => { setSelectedUser(null); setMessages([]); fetchTeamMembers(); }} className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-400">
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
                   {mode === 'team' ? <MessageSquare className="text-purple-400" size={20} /> :
                    mode === 'private' ? <User className="text-blue-400" size={20} /> :
@@ -240,7 +266,7 @@ export default function TeamChat() {
               ].map(m => (
                 <button
                   key={m.id}
-                  onClick={() => { setMode(m.id); if (m.id === 'private') { fetchTeamMembers(); setMessages([]); } }}
+                  onClick={() => switchMode(m.id)}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-all ${
                     mode === m.id ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
@@ -254,24 +280,28 @@ export default function TeamChat() {
             {mode === 'private' && !selectedUser && (
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 <p className="text-sm text-zinc-400 mb-3">Select a team member to chat with:</p>
-                {teamMembers.map(member => (
-                  <button
-                    key={member.id}
-                    onClick={() => selectPrivateChat(member)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left"
-                  >
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-purple-300 font-bold">
-                        {member.firstName[0]}
+                {teamMembers.length === 0 ? (
+                  <p className="text-sm text-zinc-500 text-center py-8">No team members found.</p>
+                ) : (
+                  teamMembers.map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => selectPrivateChat(member)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left"
+                    >
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-purple-300 font-bold">
+                          {member.firstName[0]}
+                        </div>
+                        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-zinc-950 ${member.isActive ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
                       </div>
-                      <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-zinc-950 ${member.isActive ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">{member.firstName} {member.lastName}</p>
-                      <p className="text-xs text-zinc-500 capitalize">{member.role.replace(/_/g, ' ').toLowerCase()}</p>
-                    </div>
-                  </button>
-                ))}
+                      <div>
+                        <p className="text-sm font-medium text-white">{member.firstName} {member.lastName}</p>
+                        <p className="text-xs text-zinc-500 capitalize">{member.role.replace(/_/g, ' ').toLowerCase()}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             )}
 

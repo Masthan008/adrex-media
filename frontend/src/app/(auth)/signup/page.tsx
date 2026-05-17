@@ -39,7 +39,8 @@ export default function SignupPage() {
       if (res.ok) {
         localStorage.setItem('adrex_token', data.token);
         setUser(data.user);
-        router.push('/dashboard');
+        // Hard redirect to ensure auth store rehydrates before AuthGuard checks
+        window.location.href = '/dashboard';
       } else {
         setError(data.error || 'Signup failed');
       }
