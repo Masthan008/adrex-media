@@ -3,7 +3,7 @@
 import { API_URL } from '@/lib/api';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Mail, Lock, User, Building2, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Building2, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
@@ -60,9 +60,7 @@ export default function SignupPage() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.4)]">
-            <Zap size={28} className="text-white" fill="white" />
-          </div>
+          <img src="/logo.png" alt="Adrex Media" className="w-14 h-14 rounded-2xl shadow-[0_0_30px_rgba(168,85,247,0.4)]" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight">Create your agency</h2>
         <p className="mt-2 text-center text-sm text-zinc-400">

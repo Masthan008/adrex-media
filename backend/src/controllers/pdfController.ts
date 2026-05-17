@@ -5,7 +5,7 @@ import PDFDocument from 'pdfkit';
 type Doc = InstanceType<typeof PDFDocument>;
 
 const prisma = new PrismaClient();
-const APP_NAME = 'Drex Media';
+const APP_NAME = 'Adrex Media';
 const APP_VERSION = 'v2.1';
 const BRAND_COLOR = '#7c3aed';
 const LIGHT_GRAY = '#f4f4f5';

@@ -50,9 +50,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-border/30">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-            <Zap size={16} className="text-white" fill="white" />
-          </div>
+          <img src="/logo.png" alt="Adrex Media" className="w-8 h-8 rounded-lg object-contain" />
           <div>
             <h2 className="text-lg font-bold tracking-tight text-gradient">Adrex Media</h2>
             <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate max-w-[120px]">Agency Workspace</p>

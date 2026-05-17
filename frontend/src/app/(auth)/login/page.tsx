@@ -67,9 +67,7 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 mb-4">
-            <span className="text-white font-bold text-xl">D</span>
-          </div>
+          <img src="/logo.png" alt="Adrex Media" className="w-12 h-12 rounded-2xl mx-auto mb-4" />
           <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome Back</h1>
           <p className="text-muted-foreground text-sm">Sign in to your Adrex Media OS account</p>
         </div>

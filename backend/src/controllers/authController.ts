@@ -68,11 +68,11 @@ export const signup = async (req: Request, res: Response) => {
     setImmediate(async () => {
       try {
         await transporter.sendMail({
-          from: '"Drex Media" <noreply@drexmedia.com>',
+          from: '"Adrex Media" <noreply@adrexmedia.com>',
           to: result.user.email,
-          subject: 'Verify Your Email — Drex Media',
+          subject: 'Verify Your Email — Adrex Media',
           html: `
-            <h3>Welcome to Drex Media!</h3>
+            <h3>Welcome to Adrex Media!</h3>
             <p>Click the link below to verify your email address:</p>
             <a href="${verifyUrl}">Verify Email</a>
             <p>If you did not create an account, please ignore this email.</p>
