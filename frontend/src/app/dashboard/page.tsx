@@ -14,15 +14,6 @@ import {
 } from 'recharts';
 import Link from 'next/link';
 
-const revenueData = [
-  { month: 'Jan', revenue: 24000 },
-  { month: 'Feb', revenue: 31000 },
-  { month: 'Mar', revenue: 28000 },
-  { month: 'Apr', revenue: 39000 },
-  { month: 'May', revenue: 45000 },
-  { month: 'Jun', revenue: 52000 },
-];
-
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -38,22 +29,37 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 function DashboardContent() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [stats, setStats] = useState({ campaigns: 0, clients: 0, influencers: 0, tasks: 0 });
+  const [stats, setStats] = useState({
+    campaigns: 0, clients: 0, influencers: 0, tasks: 0,
+    activeCampaigns: 0, totalRevenue: 0, totalExpenses: 0, totalMRR: 0,
+  });
+  const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('adrex_token');
     if (!token) { router.push('/login'); return; }
     fetch(`${API_URL}/api/stats/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json()).then(d => { if (d && !d.error) setStats(d); })
-      .catch(console.error).finally(() => setLoading(false));
+      .then(r => r.json())
+      .then(d => {
+        if (d && !d.error) {
+          setStats(d);
+          setMonthlyRevenue(d.monthlyRevenue || []);
+          setRecentActivity(d.recentActivity || []);
+          setRecentCampaigns(d.recentCampaigns || []);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [router]);
 
   const kpiCards = [
-    { label: 'Active Campaigns', value: stats.campaigns, icon: Megaphone, color: 'text-purple-400', bg: 'from-purple-500/20 to-purple-500/5', change: '+12%' },
-    { label: 'Total Clients', value: stats.clients, icon: Briefcase, color: 'text-blue-400', bg: 'from-blue-500/20 to-blue-500/5', change: '+8%' },
-    { label: 'Influencers', value: stats.influencers, icon: Users, color: 'text-emerald-400', bg: 'from-emerald-500/20 to-emerald-500/5', change: '+23%' },
-    { label: 'Open Tasks', value: stats.tasks, icon: Activity, color: 'text-amber-400', bg: 'from-amber-500/20 to-amber-500/5', change: '-5%' },
+    { label: 'Active Campaigns', value: stats.activeCampaigns, icon: Megaphone, color: 'text-purple-400', bg: 'from-purple-500/20 to-purple-500/5' },
+    { label: 'Total Clients', value: stats.clients, icon: Briefcase, color: 'text-blue-400', bg: 'from-blue-500/20 to-blue-500/5' },
+    { label: 'Influencers', value: stats.influencers, icon: Users, color: 'text-emerald-400', bg: 'from-emerald-500/20 to-emerald-500/5' },
+    { label: 'Open Tasks', value: stats.tasks, icon: Activity, color: 'text-amber-400', bg: 'from-amber-500/20 to-amber-500/5' },
   ];
 
   const quickLinks = [
@@ -63,12 +69,14 @@ function DashboardContent() {
     { href: '/dashboard/ai', label: 'AI Tools', icon: Sparkles, color: 'bg-gradient-to-r from-purple-500 to-blue-500' },
   ];
 
+  const hasRevenueData = monthlyRevenue.some(m => m.revenue > 0);
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold tracking-tight">
-          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.firstName} 👋
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.firstName}
         </h1>
         <p className="text-muted-foreground mt-1">Here's what's happening in your agency today.</p>
       </motion.div>
@@ -84,9 +92,6 @@ function DashboardContent() {
                 <div className={`w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center ${card.color}`}>
                   <Icon size={20} />
                 </div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${card.change.startsWith('+') ? 'text-emerald-400 bg-emerald-400/10' : 'text-red-400 bg-red-400/10'}`}>
-                  {card.change}
-                </span>
               </div>
               <p className="text-3xl font-bold text-white">{loading ? '—' : card.value}</p>
               <p className="text-sm text-zinc-400 mt-1">{card.label}</p>
@@ -103,27 +108,33 @@ function DashboardContent() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-semibold text-white">Revenue Overview</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Monthly performance for 2025</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Monthly invoiced revenue</p>
             </div>
             <Link href="/dashboard/reports" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
               Full Report <ArrowUpRight size={12} />
             </Link>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff06" />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#revenueGrad)" dot={false} activeDot={{ r: 5, fill: '#8b5cf6' }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {hasRevenueData ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={monthlyRevenue}>
+                <defs>
+                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff06" />
+                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => v > 0 ? `₹${(v / 1000).toFixed(0)}k` : '₹0'} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#revenueGrad)" dot={false} activeDot={{ r: 5, fill: '#8b5cf6' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-zinc-500 text-sm">
+              No revenue data yet. Create invoices to see your revenue trend.
+            </div>
+          )}
         </motion.div>
 
         {/* Quick Actions */}
@@ -146,66 +157,77 @@ function DashboardContent() {
             })}
           </div>
 
-          {/* AI Tip */}
-          <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-purple-500/15 to-blue-500/15 border border-purple-500/25">
+          {/* Revenue Summary */}
+          <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-emerald-500/15 to-blue-500/15 border border-emerald-500/25">
             <div className="flex items-center gap-2 mb-2">
-              <Zap size={14} className="text-purple-400" />
-              <span className="text-xs font-semibold text-purple-400">AI Insight</span>
+              <DollarSign size={14} className="text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-400">Revenue Summary</span>
             </div>
-            <p className="text-xs text-zinc-300 leading-relaxed">Your top campaign this month hit 4.6x ROAS. Try the AI Strategy tool to replicate this success.</p>
+            <p className="text-lg font-bold text-white">₹{stats.totalRevenue.toLocaleString('en-IN')}</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Total paid invoices</p>
           </div>
         </motion.div>
       </div>
 
-      {/* ROAS + Activity Row */}
+      {/* Recent Activity + Campaigns Row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* ROAS Metric */}
+        {/* Recent Activity */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
           className="glassmorphism rounded-2xl p-6">
-          <h3 className="font-semibold text-white mb-4">ROAS Breakdown</h3>
-          <div className="space-y-4">
-            {[
-              { label: 'Instagram Campaigns', roas: 4.8, pct: 80, color: 'bg-purple-500' },
-              { label: 'TikTok Campaigns', roas: 5.2, pct: 87, color: 'bg-pink-500' },
-              { label: 'YouTube Campaigns', roas: 3.6, pct: 60, color: 'bg-red-500' },
-              { label: 'Performance Ads', roas: 3.1, pct: 52, color: 'bg-blue-500' },
-            ].map((m, i) => (
-              <div key={i}>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-zinc-400">{m.label}</span>
-                  <span className="text-white font-bold">{m.roas}x</span>
+          <h3 className="font-semibold text-white mb-4">Recent Activity</h3>
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-zinc-500 text-center py-8">No activity yet. Start creating campaigns, clients, and tasks.</p>
+          ) : (
+            <div className="space-y-4">
+              {recentActivity.slice(0, 6).map((a, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className={`w-2 h-2 rounded-full ${a.color} mt-1.5 shrink-0`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-300 font-medium">{a.action}</p>
+                    <p className="text-xs text-zinc-500 truncate">{a.detail}</p>
+                  </div>
+                  <span className="text-xs text-zinc-600 whitespace-nowrap">{a.time}</span>
                 </div>
-                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                  <motion.div className={`h-full ${m.color} rounded-full`}
-                    initial={{ width: 0 }} animate={{ width: `${m.pct}%` }} transition={{ delay: 0.6 + i * 0.1, duration: 0.8, ease: 'easeOut' }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
-        {/* Recent Activity */}
+        {/* Recent Campaigns */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
           className="glassmorphism rounded-2xl p-6">
-          <h3 className="font-semibold text-white mb-4">Recent Activity</h3>
-          <div className="space-y-4">
-            {[
-              { action: 'New campaign created', detail: 'Summer Collection 2025', time: '2 min ago', color: 'bg-purple-500' },
-              { action: 'Influencer added', detail: '@sarah.lifestyle (142K)', time: '18 min ago', color: 'bg-blue-500' },
-              { action: 'Invoice paid', detail: 'FashionBrand Co. — $8,500', time: '1 hr ago', color: 'bg-emerald-500' },
-              { action: 'Task completed', detail: 'Brief 5 influencers for Q3', time: '3 hr ago', color: 'bg-amber-500' },
-              { action: 'New client onboarded', detail: 'TechStart Pvt. Ltd.', time: '1 day ago', color: 'bg-pink-500' },
-            ].map((a, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full ${a.color} mt-1.5 shrink-0`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-zinc-300 font-medium">{a.action}</p>
-                  <p className="text-xs text-zinc-500 truncate">{a.detail}</p>
-                </div>
-                <span className="text-xs text-zinc-600 whitespace-nowrap">{a.time}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white">Recent Campaigns</h3>
+            <Link href="/dashboard/campaigns" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+              View All <ArrowUpRight size={12} />
+            </Link>
           </div>
+          {recentCampaigns.length === 0 ? (
+            <p className="text-sm text-zinc-500 text-center py-8">No campaigns yet. Create your first campaign to get started.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentCampaigns.slice(0, 5).map((c, i) => {
+                const statusColors: Record<string, string> = {
+                  ACTIVE: 'text-emerald-400 bg-emerald-400/10',
+                  DRAFT: 'text-zinc-400 bg-zinc-400/10',
+                  PLANNED: 'text-blue-400 bg-blue-400/10',
+                  COMPLETED: 'text-purple-400 bg-purple-400/10',
+                  PAUSED: 'text-amber-400 bg-amber-400/10',
+                };
+                return (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/3 hover:bg-white/5 transition-all">
+                    <div>
+                      <p className="text-sm font-medium text-white">{c.name}</p>
+                      <p className="text-xs text-zinc-500">₹{(c.budget || 0).toLocaleString('en-IN')}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[c.status] || statusColors.DRAFT}`}>
+                      {c.status}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
@@ -214,7 +236,14 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="text-zinc-500">Loading dashboard...</div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
       <DashboardContent />
     </Suspense>
   );

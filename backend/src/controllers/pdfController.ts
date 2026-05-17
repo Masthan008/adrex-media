@@ -21,56 +21,63 @@ export const generateInvoicePDF = async (req: Request, res: Response) => {
 
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${id}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoice.id.slice(0, 8)}.pdf`);
     doc.pipe(res);
 
-    doc.fontSize(24).font('Helvetica-Bold').text('Adrex Media', { align: 'left' });
-    doc.moveDown(0.5);
-    doc.fontSize(10).text('Invoice', { align: 'left' });
+    // Header
+    doc.fontSize(22).font('Helvetica-Bold').fillColor('#18181b').text(invoice.agency.name, { align: 'left' });
+    doc.fontSize(10).font('Helvetica').fillColor('#71717a').text('Invoice', { align: 'left' });
+    if (invoice.agency.website) doc.fontSize(9).text(invoice.agency.website, { align: 'left' });
+    doc.moveDown(1.5);
+
+    // Invoice details
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#18181b').text('Invoice Details');
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica').fillColor('#3f3f46');
+    doc.text(`Invoice ID: ${invoice.id.slice(0, 8)}`, { indent: 10 });
+    doc.text(`Issued: ${new Date(invoice.issuedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, { indent: 10 });
+    doc.text(`Due: ${new Date(invoice.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, { indent: 10 });
+    const statusColor = invoice.status === 'PAID' ? '#10b981' : invoice.status === 'OVERDUE' ? '#ef4444' : '#f59e0b';
+    doc.fillColor(statusColor).font('Helvetica-Bold').text(`Status: ${invoice.status}`, { indent: 10 });
     doc.moveDown(1);
 
-    doc.fontSize(12).font('Helvetica-Bold').text('Invoice Details');
-    doc.fontSize(10).font('Helvetica').text(`Invoice ID: ${invoice.id}`);
-    doc.text(`Date: ${new Date(invoice.issuedDate).toLocaleDateString()}`);
-    doc.text(`Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}`);
-    doc.text(`Status: ${invoice.status}`);
+    // Bill To
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#18181b').text('Bill To:');
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica').fillColor('#3f3f46');
+    doc.text(invoice.client.companyName, { indent: 10 });
+    doc.text(invoice.client.contactName, { indent: 10 });
+    doc.text(invoice.client.email, { indent: 10 });
+    if (invoice.client.phone) doc.text(invoice.client.phone, { indent: 10 });
     doc.moveDown(1);
 
-    doc.fontSize(12).font('Helvetica-Bold').text('Bill To:');
-    doc.fontSize(10).font('Helvetica').text(invoice.client.companyName);
-    doc.text(invoice.client.contactName);
-    doc.text(invoice.client.email);
-    if (invoice.client.phone) doc.text(invoice.client.phone);
+    // Divider
+    doc.lineWidth(1).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.8);
+
+    // Line items header
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#18181b').text('Description', 50, doc.y, { width: 300 });
+    doc.text('Amount', 450, doc.y, { width: 95, align: 'right' });
+    doc.moveDown(0.3);
+    doc.lineWidth(0.5).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    // Line item
+    doc.fontSize(10).font('Helvetica').fillColor('#3f3f46').text('Professional Services', 50, doc.y, { width: 300 });
+    doc.text(`₹${invoice.amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 95, align: 'right' });
     doc.moveDown(1);
 
-    doc.fontSize(12).font('Helvetica-Bold').text('From:');
-    doc.fontSize(10).font('Helvetica').text(invoice.agency.name);
-    if (invoice.agency.website) doc.text(invoice.agency.website);
-    doc.moveDown(1);
-
-    doc.lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    // Total
+    doc.lineWidth(1).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
     doc.moveDown(0.5);
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#18181b').text('Total Due:', 380, doc.y, { width: 70 });
+    doc.text(`₹${invoice.amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 95, align: 'right' });
 
-    doc.fontSize(10).font('Helvetica-Bold').text('Description', 50, doc.y, { width: 300 });
-    doc.text('Amount', 450, doc.y, { width: 100, align: 'right' });
-    doc.moveDown(0.5);
-    doc.lineWidth(0.5).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-    doc.moveDown(0.5);
-
-    doc.fontSize(10).font('Helvetica').text('Professional Services', 50, doc.y, { width: 300 });
-    doc.text(`₹${invoice.amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 100, align: 'right' });
-    doc.moveDown(1);
-
-    doc.lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-    doc.moveDown(0.5);
-
-    doc.fontSize(14).font('Helvetica-Bold').text('Total:', 400, doc.y, { width: 50 });
-    doc.text(`₹${invoice.amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 100, align: 'right' });
-
-    doc.moveDown(2);
-    doc.fontSize(8).font('Helvetica').text('Thank you for your business! - Adrex Media', { align: 'center' });
+    // Footer
+    doc.moveDown(3);
+    doc.fontSize(8).font('Helvetica').fillColor('#a1a1aa').text(`Generated by ${invoice.agency.name} • ${new Date().toLocaleDateString('en-IN')}`, { align: 'center' });
 
     doc.end();
   } catch (error) {
@@ -86,49 +93,128 @@ export const generateReportPDF = async (req: Request, res: Response) => {
 
     const agencyId = user.agencyId;
 
-    const [campaigns, clients, influencers, invoices] = await Promise.all([
-      prisma.campaign.findMany({ where: { agencyId }, select: { name: true, status: true, budget: true } }),
-      prisma.client.findMany({ where: { agencyId }, select: { companyName: true, monthlyBudget: true } }),
-      prisma.influencer.count({ where: { agencyId } }),
-      prisma.invoice.findMany({ where: { agencyId }, select: { amount: true, status: true } }),
+    const [agency, campaigns, clients, influencers, expenses, invoices, tasks] = await Promise.all([
+      prisma.agency.findUnique({ where: { id: agencyId } }),
+      prisma.campaign.findMany({ where: { agencyId }, orderBy: { createdAt: 'desc' } }),
+      prisma.client.findMany({ where: { agencyId }, orderBy: { createdAt: 'desc' } }),
+      prisma.influencer.findMany({ where: { agencyId } }),
+      prisma.expense.findMany({ where: { agencyId }, orderBy: { date: 'desc' } }),
+      prisma.invoice.findMany({ where: { agencyId }, orderBy: { createdAt: 'desc' } }),
+      prisma.task.findMany({ where: { agencyId } }),
     ]);
 
     const totalRevenue = invoices.filter(i => i.status === 'PAID').reduce((s, i) => s + i.amount, 0);
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
     const totalBudget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
+    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=adrex-report.pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${agency?.name || 'agency'}-report-${new Date().toISOString().slice(0, 10)}.pdf`);
     doc.pipe(res);
 
-    doc.fontSize(24).font('Helvetica-Bold').text('Adrex Media', { align: 'left' });
+    // Cover
+    doc.fontSize(26).font('Helvetica-Bold').fillColor('#18181b').text(agency?.name || 'Agency Report', { align: 'left' });
+    doc.moveDown(0.3);
+    doc.fontSize(14).font('Helvetica').fillColor('#71717a').text('Performance Report', { align: 'left' });
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, { align: 'left' });
+    doc.moveDown(1.5);
+
+    // Divider
+    doc.lineWidth(1).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(1);
+
+    // Summary
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#18181b').text('Summary');
     doc.moveDown(0.5);
-    doc.fontSize(14).text('Agency Performance Report', { align: 'left' });
-    doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString()}`, { align: 'left' });
-    doc.moveDown(1);
-
-    doc.fontSize(14).font('Helvetica-Bold').text('Summary');
-    doc.fontSize(10).font('Helvetica').text(`Total Campaigns: ${campaigns.length}`);
-    doc.text(`Active Campaigns: ${campaigns.filter(c => c.status === 'ACTIVE').length}`);
-    doc.text(`Total Clients: ${clients.length}`);
-    doc.text(`Total Influencers: ${influencers}`);
-    doc.text(`Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}`);
-    doc.text(`Total Budget: ₹${totalBudget.toLocaleString('en-IN')}`);
-    doc.moveDown(1);
-
-    doc.fontSize(14).font('Helvetica-Bold').text('Campaigns');
-    campaigns.forEach(c => {
-      doc.fontSize(10).text(`- ${c.name} (${c.status}) - ₹${(c.budget || 0).toLocaleString('en-IN')}`);
+    doc.fontSize(10).font('Helvetica').fillColor('#3f3f46');
+    const summaryItems = [
+      ['Total Campaigns', campaigns.length.toString()],
+      ['Active Campaigns', activeCampaigns.toString()],
+      ['Total Clients', clients.length.toString()],
+      ['Total Influencers', influencers.length.toString()],
+      ['Open Tasks', tasks.filter(t => t.status !== 'DONE').length.toString()],
+      ['Total Revenue (Paid)', `₹${totalRevenue.toLocaleString('en-IN')}`],
+      ['Total Expenses', `₹${totalExpenses.toLocaleString('en-IN')}`],
+      ['Total Campaign Budget', `₹${totalBudget.toLocaleString('en-IN')}`],
+    ];
+    summaryItems.forEach(([label, value]) => {
+      doc.text(`${label}:`, 50, doc.y, { width: 250 });
+      doc.text(value, 350, doc.y, { width: 195, align: 'right' });
+      doc.moveDown(0.3);
     });
     doc.moveDown(1);
 
-    doc.fontSize(14).font('Helvetica-Bold').text('Clients');
-    clients.forEach(c => {
-      doc.fontSize(10).text(`- ${c.companyName} - ₹${(c.monthlyBudget || 0).toLocaleString('en-IN')}/month`);
-    });
+    // Campaigns
+    if (campaigns.length > 0) {
+      doc.lineWidth(0.5).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc.moveDown(0.8);
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#18181b').text('Campaigns');
+      doc.moveDown(0.5);
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#71717a').text('Name', 50, doc.y, { width: 200 });
+      doc.text('Status', 270, doc.y, { width: 80, align: 'center' });
+      doc.text('Budget', 370, doc.y, { width: 175, align: 'right' });
+      doc.moveDown(0.3);
+      doc.lineWidth(0.3).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc.moveDown(0.3);
 
+      campaigns.slice(0, 20).forEach(c => {
+        doc.fontSize(9).font('Helvetica').fillColor('#3f3f46');
+        doc.text(c.name, 50, doc.y, { width: 200, ellipsis: true });
+        doc.text(c.status, 270, doc.y, { width: 80, align: 'center' });
+        doc.text(`₹${(c.budget || 0).toLocaleString('en-IN')}`, 370, doc.y, { width: 175, align: 'right' });
+        doc.moveDown(0.3);
+      });
+      doc.moveDown(0.5);
+    }
+
+    // Clients
+    if (clients.length > 0) {
+      doc.lineWidth(0.5).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc.moveDown(0.8);
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#18181b').text('Clients');
+      doc.moveDown(0.5);
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#71717a').text('Company', 50, doc.y, { width: 200 });
+      doc.text('Contact', 270, doc.y, { width: 120 });
+      doc.text('Monthly Budget', 410, doc.y, { width: 135, align: 'right' });
+      doc.moveDown(0.3);
+      doc.lineWidth(0.3).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc.moveDown(0.3);
+
+      clients.slice(0, 20).forEach(c => {
+        doc.fontSize(9).font('Helvetica').fillColor('#3f3f46');
+        doc.text(c.companyName, 50, doc.y, { width: 200, ellipsis: true });
+        doc.text(c.contactName, 270, doc.y, { width: 120 });
+        doc.text(`₹${(c.monthlyBudget || 0).toLocaleString('en-IN')}`, 410, doc.y, { width: 135, align: 'right' });
+        doc.moveDown(0.3);
+      });
+      doc.moveDown(0.5);
+    }
+
+    // Expense Breakdown
+    if (expenses.length > 0) {
+      doc.lineWidth(0.5).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc.moveDown(0.8);
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#18181b').text('Expense Breakdown by Category');
+      doc.moveDown(0.5);
+
+      const expenseByCategory: Record<string, number> = {};
+      expenses.forEach(e => { expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount; });
+
+      Object.entries(expenseByCategory).forEach(([cat, amount]) => {
+        doc.fontSize(10).font('Helvetica').fillColor('#3f3f46');
+        doc.text(cat, 50, doc.y, { width: 300 });
+        doc.text(`₹${amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 95, align: 'right' });
+        doc.moveDown(0.3);
+      });
+      doc.moveDown(0.5);
+    }
+
+    // Footer
     doc.moveDown(2);
-    doc.fontSize(8).font('Helvetica').text('Adrex Media - Agency Management Platform', { align: 'center' });
+    doc.lineWidth(0.5).strokeColor('#e4e4e7').moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(8).font('Helvetica').fillColor('#a1a1aa').text(`${agency?.name || 'Adrex Media'} • Generated on ${new Date().toLocaleDateString('en-IN')}`, { align: 'center' });
 
     doc.end();
   } catch (error) {
