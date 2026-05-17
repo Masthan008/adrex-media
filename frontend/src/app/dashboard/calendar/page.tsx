@@ -33,6 +33,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', type: 'meeting', color: 'bg-blue-500/80' });
 
   const fetchEvents = async () => {
@@ -76,10 +77,64 @@ export default function CalendarPage() {
         setEvents(prev => [...prev, created]);
         setNewEvent({ title: '', date: '', type: 'meeting', color: 'bg-blue-500/80' });
         setShowModal(false);
+        setEditingEvent(null);
       }
     } catch (error) {
       console.error('Failed to create event', error);
     }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent || !newEvent.title || !newEvent.date) return;
+
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/calendar/${editingEvent.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newEvent)
+      });
+      
+      if (res.ok) {
+        const updated = await res.json();
+        setEvents(prev => prev.map(ev => ev.id === updated.id ? updated : ev));
+        setShowModal(false);
+        setEditingEvent(null);
+      }
+    } catch (error) {
+      console.error('Failed to update event', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this event?')) return;
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/calendar/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setEvents(prev => prev.filter(ev => ev.id !== id));
+      }
+    } catch (error) {
+      console.error('Failed to delete event', error);
+    }
+  };
+
+  const openEditModal = (event: CalEvent) => {
+    setEditingEvent(event);
+    setNewEvent({
+      title: event.title,
+      date: event.date,
+      type: event.type,
+      color: event.color
+    });
+    setShowModal(true);
   };
 
   const daysInMonth = getDaysInMonth(current.year, current.month);
@@ -199,10 +254,16 @@ export default function CalendarPage() {
               ) : (
                 <div className="space-y-2">
                   {selectedEvents.map(ev => (
-                    <div key={ev.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${ev.color.replace('/80', '/15')} bg-white/5`}>
+                    <div key={ev.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${ev.color.replace('/80', '/15')} bg-white/5 group`}>
                       <div className={`w-2 h-2 rounded-full ${ev.color}`} />
-                      <span className="text-sm font-medium">{ev.title}</span>
-                      <span className="ml-auto text-xs text-muted-foreground capitalize">{ev.type}</span>
+                      <span className="text-sm font-medium flex-1">{ev.title}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{ev.type}</span>
+                      <button onClick={() => openEditModal(ev)} className="p-1 hover:bg-white/10 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      </button>
+                      <button onClick={() => handleDelete(ev.id)} className="p-1 hover:bg-red-500/20 rounded text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -239,13 +300,16 @@ export default function CalendarPage() {
               <div className="text-sm text-muted-foreground">No upcoming events.</div>
             ) : upcomingEvents.map((ev, i) => (
               <motion.div key={ev.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                className="flex items-start gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition-all">
+                className="flex items-start gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition-all group">
                 <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${ev.color}`} />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{ev.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{ev.date}</p>
                 </div>
                 <span className="text-[10px] capitalize text-muted-foreground shrink-0">{ev.type}</span>
+                <button onClick={() => openEditModal(ev)} className="p-1 hover:bg-white/10 rounded text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                </button>
               </motion.div>
             ))}
           </div>
@@ -257,14 +321,14 @@ export default function CalendarPage() {
         {showModal && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowModal(false); setEditingEvent(null); }} />
             <motion.div className="relative z-10 w-full max-w-md glassmorphism rounded-2xl p-8"
               initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">New Event</h2>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
+                <h2 className="text-2xl font-bold">{editingEvent ? 'Edit Event' : 'New Event'}</h2>
+                <button onClick={() => { setShowModal(false); setEditingEvent(null); }} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
               </div>
-              <form className="space-y-4" onSubmit={handleCreate}>
+              <form className="space-y-4" onSubmit={editingEvent ? handleUpdate : handleCreate}>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Event Title</label>
                   <input value={newEvent.title} onChange={e => setNewEvent(p => ({ ...p, title: e.target.value }))}
@@ -300,7 +364,7 @@ export default function CalendarPage() {
                   </div>
                 </div>
                 <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] mt-4">
-                  Add Event
+                  {editingEvent ? 'Update Event' : 'Add Event'}
                 </button>
               </form>
             </motion.div>

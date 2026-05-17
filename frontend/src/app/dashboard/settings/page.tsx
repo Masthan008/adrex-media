@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Building2, CreditCard, Bell, Shield,
-  Save, Camera, Check, ChevronRight, Settings
+  Save, Camera, Check, ChevronRight, Settings, Upload, Loader2
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
@@ -100,6 +100,15 @@ function SettingsContent() {
     browserAlerts: true,
     weeklyDigest: true,
   });
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
 
@@ -124,6 +133,20 @@ function SettingsContent() {
           headers,
           body: JSON.stringify(agency)
         });
+      } else if (activeTab === 'notifications') {
+        setLoadingNotifs(true);
+        await fetch(`${API_URL}/api/notifications/preferences`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            emailCampaigns: notifs.emailCampaigns,
+            emailTasks: notifs.emailTasks,
+            emailInfluencers: notifs.emailInfluencers,
+            browserAlerts: notifs.browserAlerts,
+            weeklyDigest: notifs.weeklyDigest,
+          })
+        });
+        setLoadingNotifs(false);
       } else if (activeTab === 'security') {
         if (!passwords.current || !passwords.newPass || !passwords.confirm) {
           alert('Please fill out all password fields');
@@ -152,6 +175,57 @@ function SettingsContent() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setAvatarUploading(true);
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/user/avatar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvatarUrl(data.avatarUrl);
+        setUser({ ...user!, avatar: data.avatarUrl });
+      }
+    } catch (error) {
+      console.error('Avatar upload failed', error);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setLogoUploading(true);
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/agency/logo`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAgencyLogoUrl(data.logoUrl);
+      }
+    } catch (error) {
+      console.error('Logo upload failed', error);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   useEffect(() => {
     setActiveTab(tabParam);
   }, [tabParam]);
@@ -174,6 +248,7 @@ function SettingsContent() {
             teamSize: data.teamSize || '10-50',
             country: data.country || ''
           }));
+          if (data.logo) setAgencyLogoUrl(data.logo);
         }
       } catch (err) {
         console.error(err);
@@ -182,8 +257,34 @@ function SettingsContent() {
       }
     };
 
+    const fetchNotifPrefs = async () => {
+      try {
+        const token = localStorage.getItem('adrex_token');
+        const res = await fetch(`${API_URL}/api/notifications/preferences`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const prefs = await res.json();
+          setNotifs({
+            emailCampaigns: prefs.emailCampaigns ?? true,
+            emailTasks: prefs.emailTasks ?? true,
+            emailInfluencers: prefs.emailInfluencers ?? false,
+            browserAlerts: prefs.browserAlerts ?? true,
+            weeklyDigest: prefs.weeklyDigest ?? true,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     fetchAgency();
+    fetchNotifPrefs();
   }, []);
+
+  useEffect(() => {
+    if (user?.avatar) setAvatarUrl(user.avatar);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -242,11 +343,16 @@ function SettingsContent() {
             </div>
             <div className="flex items-center gap-5">
               <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
-                  {profile.firstName[0]?.toUpperCase() ?? 'D'}
-                </div>
-                <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-zinc-800 border border-white/15 rounded-lg flex items-center justify-center hover:bg-zinc-700 transition-all">
-                  <Camera size={13} className="text-zinc-300" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-2xl object-cover" />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                    {profile.firstName[0]?.toUpperCase() ?? 'D'}
+                  </div>
+                )}
+                <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
+                <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} className="absolute -bottom-1 -right-1 w-7 h-7 bg-zinc-800 border border-white/15 rounded-lg flex items-center justify-center hover:bg-zinc-700 transition-all disabled:opacity-50">
+                  {avatarUploading ? <Loader2 size={13} className="text-zinc-300 animate-spin" /> : <Camera size={13} className="text-zinc-300" />}
                 </button>
               </div>
               <div>
@@ -279,6 +385,25 @@ function SettingsContent() {
             <div>
               <h2 className="text-xl font-bold mb-1">Agency Settings</h2>
               <p className="text-sm text-zinc-500">Configure your agency-level preferences.</p>
+            </div>
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                {agencyLogoUrl ? (
+                  <img src={agencyLogoUrl} alt="Agency Logo" className="w-20 h-20 rounded-2xl object-cover border border-white/10" />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <Building2 size={32} className="text-zinc-500" />
+                  </div>
+                )}
+                <input type="file" ref={logoInputRef} onChange={handleLogoUpload} className="hidden" accept="image/*" />
+                <button type="button" onClick={() => logoInputRef.current?.click()} disabled={logoUploading} className="absolute -bottom-1 -right-1 w-7 h-7 bg-zinc-800 border border-white/15 rounded-lg flex items-center justify-center hover:bg-zinc-700 transition-all disabled:opacity-50">
+                  {logoUploading ? <Loader2 size={13} className="text-zinc-300 animate-spin" /> : <Upload size={13} className="text-zinc-300" />}
+                </button>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Agency Logo</p>
+                <p className="text-xs text-zinc-500">PNG or JPG, max 2MB</p>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField label="Agency Name" value={agency.name} onChange={v => setAgency(p => ({ ...p, name: v }))} />
@@ -319,7 +444,19 @@ function SettingsContent() {
                 <ToggleRow label="Real-time Alerts" desc="Get instant browser notifications for critical events." value={notifs.browserAlerts} onChange={v => setNotifs(p => ({ ...p, browserAlerts: v }))} />
               </div>
             </div>
-            <div className="flex justify-end"><SaveButton onClick={handleSave} saved={saved} /></div>
+            <div className="flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={loadingNotifs}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all ${saved
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(168,85,247,0.3)] disabled:opacity-50'
+                }`}
+              >
+                {loadingNotifs ? <Loader2 size={16} className="animate-spin" /> : saved ? <Check size={16} /> : <Save size={16} />}
+                {loadingNotifs ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+              </button>
+            </div>
           </>
         )}
 

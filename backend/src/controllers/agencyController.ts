@@ -1,7 +1,16 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const AgencyUpdateSchema = z.object({
+  name: z.string().min(2, 'Agency name must be at least 2 characters').optional(),
+  website: z.string().url('Invalid website URL').optional().or(z.literal('')),
+  industry: z.string().optional(),
+  teamSize: z.string().optional(),
+  country: z.string().optional(),
+});
 
 export const getAgency = async (req: Request, res: Response) => {
   try {
@@ -26,16 +35,21 @@ export const updateAgency = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { name, website, industry, teamSize, country } = req.body;
+    const validation = AgencyUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
+    const { name, website, industry, teamSize, country } = validation.data;
 
     const updatedAgency = await prisma.agency.update({
       where: { id: user.agencyId },
       data: {
-        name,
-        website,
-        industry,
-        teamSize,
-        country,
+        ...(name && { name }),
+        ...(website !== undefined && { website }),
+        ...(industry && { industry }),
+        ...(teamSize && { teamSize }),
+        ...(country && { country }),
       },
     });
 

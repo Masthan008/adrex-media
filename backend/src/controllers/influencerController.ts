@@ -1,7 +1,22 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const InfluencerSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address').optional(),
+  phone: z.string().optional(),
+  instagram: z.string().optional(),
+  tiktok: z.string().optional(),
+  youtube: z.string().optional(),
+  niche: z.string().optional(),
+  rating: z.number().min(0).max(5).optional(),
+  notes: z.string().optional(),
+});
+
+const InfluencerUpdateSchema = InfluencerSchema.partial();
 
 export const getInfluencers = async (req: Request, res: Response) => {
   try {
@@ -25,7 +40,12 @@ export const createInfluencer = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { name, email, phone, instagram, tiktok, youtube, niche, rating, notes } = req.body;
+    const validation = InfluencerSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
+    const { name, email, phone, instagram, tiktok, youtube, niche, rating, notes } = validation.data;
 
     const influencer = await prisma.influencer.create({
       data: {
@@ -54,8 +74,13 @@ export const updateInfluencer = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const validation = InfluencerUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
     const { id } = req.params;
-    const { name, email, phone, instagram, tiktok, youtube, niche, rating, notes } = req.body;
+    const { name, email, phone, instagram, tiktok, youtube, niche, rating, notes } = validation.data;
 
     const influencer = await prisma.influencer.update({
       where: { id, agencyId: user.agencyId },

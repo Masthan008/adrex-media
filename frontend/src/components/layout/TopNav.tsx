@@ -1,19 +1,21 @@
 'use client';
 
 import { Bell, Search, ChevronDown, Settings, LogOut, User } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { API_URL } from '@/lib/api';
 
-interface NotificationItem {
+interface BackendNotification {
   id: string;
-  text: string;
-  time: string;
-  unread: boolean;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 const dropdownBase = "absolute right-0 top-12 z-50 rounded-2xl border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl bg-zinc-900/95";
@@ -21,24 +23,38 @@ const dropdownBase = "absolute right-0 top-12 z-50 rounded-2xl border border-whi
 export default function TopNav() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: '1', text: 'Task "Draft contracts" is overdue', time: '3h ago', unread: true },
-    { id: '2', text: 'Client NovaTech added ₹10L to budget', time: '1h ago', unread: false },
-  ]);
+  const [notifications, setNotifications] = useState<BackendNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
   const { user, logout } = useAuthStore();
   const { socket } = useSocketStore();
   const router = useRouter();
 
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/notifications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+        setUnreadCount(data.filter((n: BackendNotification) => !n.isRead).length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
   useEffect(() => {
     if (!socket) return;
     
-    const handleNewNotification = (notif: any) => {
-      setNotifications(prev => [{
-        id: Date.now().toString(),
-        text: notif.text,
-        time: 'Just now',
-        unread: true
-      }, ...prev]);
+    const handleNewNotification = async (notif: any) => {
+      await fetchNotifications();
     };
 
     socket.on('receive_notification', handleNewNotification);
@@ -46,6 +62,48 @@ export default function TopNav() {
       socket.off('receive_notification', handleNewNotification);
     };
   }, [socket]);
+
+  const markAsRead = async (id: string) => {
+    try {
+      const token = localStorage.getItem('adrex_token');
+      await fetch(`${API_URL}/api/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to mark as read', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('adrex_token');
+      await fetch(`${API_URL}/api/notifications/read-all`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to mark all as read', error);
+    }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
 
   const displayName = user ? `${user.firstName} ${user.lastName}`.trim() : 'Admin';
   const displayEmail = user?.email ?? 'admin@adrexmedia.com';
@@ -74,11 +132,15 @@ export default function TopNav() {
         <div className="relative">
           <button
             id="notif-btn"
-            onClick={() => { setShowNotifs(p => !p); setShowProfile(false); }}
+            onClick={() => { setShowNotifs(p => !p); setShowProfile(false); if (!showNotifs) fetchNotifications(); }}
             className="relative p-2 rounded-xl hover:bg-white/8 text-zinc-400 hover:text-white transition-all"
           >
             <Bell size={19} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-purple-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -90,31 +152,36 @@ export default function TopNav() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -8 }}
                   transition={{ duration: 0.15 }}
-                  className={`${dropdownBase} w-80`}
+                  className={`${dropdownBase} w-96 max-h-[480px] flex flex-col`}
                 >
-                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
                     <span className="text-sm font-semibold text-white">Notifications</span>
-                    <span className="text-xs text-purple-400 font-medium">{notifications.filter(n => n.unread).length} unread</span>
+                    <span className="text-xs text-purple-400 font-medium">{unreadCount} unread</span>
                   </div>
-                  {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-zinc-500">No new notifications</div>
-                  ) : (
-                    notifications.map((n) => (
-                      <div key={n.id} onClick={() => setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, unread: false } : p))} className={`px-4 py-3 border-b border-white/8 last:border-0 hover:bg-white/5 transition-all cursor-pointer ${n.unread ? 'bg-purple-500/8' : ''}`}>
-                        <div className="flex items-start gap-2.5">
-                          {n.unread && <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-1.5 shrink-0" />}
-                          {!n.unread && <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" />}
-                          <div>
-                            <p className="text-sm text-white leading-snug">{n.text}</p>
-                            <p className="text-xs text-zinc-500 mt-0.5">{n.time}</p>
+                  <div className="overflow-y-auto flex-1">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-zinc-500">No notifications</div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div key={n.id} onClick={() => markAsRead(n.id)} className={`px-4 py-3 border-b border-white/8 last:border-0 hover:bg-white/5 transition-all cursor-pointer ${!n.isRead ? 'bg-purple-500/8' : ''}`}>
+                          <div className="flex items-start gap-2.5">
+                            {!n.isRead && <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-1.5 shrink-0" />}
+                            {n.isRead && <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" />}
+                            <div>
+                              {n.title && <p className="text-xs font-medium text-purple-300">{n.title}</p>}
+                              <p className="text-sm text-white leading-snug">{n.message}</p>
+                              <p className="text-xs text-zinc-500 mt-0.5">{timeAgo(n.createdAt)}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  )}
-                  <div className="px-4 py-2.5 border-t border-white/10">
-                    <button className="text-xs text-purple-400 hover:text-purple-300 transition-colors w-full text-center">Mark all as read</button>
+                      ))
+                    )}
                   </div>
+                  {unreadCount > 0 && (
+                    <div className="px-4 py-2.5 border-t border-white/10 shrink-0">
+                      <button onClick={markAllAsRead} className="text-xs text-purple-400 hover:text-purple-300 transition-colors w-full text-center">Mark all as read</button>
+                    </div>
+                  )}
                 </motion.div>
               </>
             )}

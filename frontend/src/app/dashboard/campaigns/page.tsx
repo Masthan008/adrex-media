@@ -32,6 +32,7 @@ export default function CampaignsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [newCamp, setNewCamp] = useState({ name: '', clientId: '', budget: '', status: 'DRAFT', startDate: '', endDate: '', description: '' });
   
   // AI state
@@ -73,10 +74,62 @@ export default function CampaignsPage() {
         setNewCamp({ name: '', clientId: '', budget: '', status: 'DRAFT', startDate: '', endDate: '', description: '' });
         setAiSuggested(false);
         setShowModal(false);
+        setEditingCampaign(null);
       }
     } catch (error) {
       console.error('Failed to create campaign', error);
     }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCampaign) return;
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/campaigns/${editingCampaign.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newCamp)
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setCampaigns(prev => prev.map(c => c.id === updated.id ? updated : c));
+        setShowModal(false);
+        setEditingCampaign(null);
+      }
+    } catch (error) {
+      console.error('Failed to update campaign', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this campaign?')) return;
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/campaigns/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setCampaigns(prev => prev.filter(c => c.id !== id));
+      }
+    } catch (error) {
+      console.error('Failed to delete campaign', error);
+    }
+  };
+
+  const openEditModal = (campaign: Campaign) => {
+    setEditingCampaign(campaign);
+    setNewCamp({
+      name: campaign.name,
+      clientId: '',
+      budget: String(campaign.budget),
+      status: campaign.status,
+      startDate: campaign.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : '',
+      endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().split('T')[0] : '',
+      description: ''
+    });
+    setShowModal(true);
   };
 
   const handleAIGenerate = async () => {
@@ -208,9 +261,15 @@ export default function CampaignsPage() {
                         {new Date(c.startDate).toLocaleDateString()} → {new Date(c.endDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <button className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all">
-                          <MoreHorizontal size={16} />
-                        </button>
+                        <div className="relative group/more">
+                          <button onClick={(e) => { e.stopPropagation(); openEditModal(c); }} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all">
+                            <MoreHorizontal size={16} />
+                          </button>
+                          <div className="absolute right-0 top-full mt-1 w-36 bg-zinc-900 border border-white/10 rounded-xl shadow-xl opacity-0 invisible group-hover/more:opacity-100 group-hover/more:visible transition-all z-10">
+                            <button onClick={() => openEditModal(c)} className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 rounded-t-xl">Edit</button>
+                            <button onClick={() => handleDelete(c.id)} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-b-xl">Delete</button>
+                          </div>
+                        </div>
                       </td>
                     </motion.tr>
                   );
@@ -226,18 +285,18 @@ export default function CampaignsPage() {
         {showModal && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowModal(false); setAiSuggested(false); }} />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowModal(false); setAiSuggested(false); setEditingCampaign(null); }} />
             <motion.div className="relative z-10 w-full max-w-lg bg-zinc-900/95 border border-white/15 rounded-2xl p-8 shadow-2xl"
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold">New Campaign</h2>
-                  <p className="text-sm text-zinc-500 mt-0.5">Fill in the details or use AI to spark ideas.</p>
+                  <h2 className="text-2xl font-bold">{editingCampaign ? 'Edit Campaign' : 'New Campaign'}</h2>
+                  <p className="text-sm text-zinc-500 mt-0.5">{editingCampaign ? 'Update the campaign details.' : 'Fill in the details or use AI to spark ideas.'}</p>
                 </div>
-                <button onClick={() => { setShowModal(false); setAiSuggested(false); }} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
+                <button onClick={() => { setShowModal(false); setAiSuggested(false); setEditingCampaign(null); }} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
               </div>
 
-              <form className="space-y-4" onSubmit={handleCreate}>
+              <form className="space-y-4" onSubmit={editingCampaign ? handleUpdate : handleCreate}>
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-zinc-300">Client</label>
                   <select value={newCamp.clientId} onChange={e => setNewCamp(p => ({ ...p, clientId: e.target.value }))} required
@@ -250,17 +309,19 @@ export default function CampaignsPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-sm font-medium text-zinc-300">Campaign Name</label>
-                    <button type="button" onClick={handleAIGenerate} disabled={aiLoading}
-                      className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 transition-all disabled:opacity-50">
-                      {aiLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                      {aiLoading ? 'Generating...' : '✦ Spark with AI'}
-                    </button>
+                    {!editingCampaign && (
+                      <button type="button" onClick={handleAIGenerate} disabled={aiLoading}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 transition-all disabled:opacity-50">
+                        {aiLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                        {aiLoading ? 'Generating...' : '✦ Spark with AI'}
+                      </button>
+                    )}
                   </div>
                   <input value={newCamp.name} onChange={e => setNewCamp(p => ({ ...p, name: e.target.value }))} type="text" placeholder="e.g. Summer Glow 2025" required
                     className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
                 </div>
 
-                {aiSuggested && newCamp.description && (
+                {!editingCampaign && aiSuggested && newCamp.description && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                     className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
                     <p className="text-xs font-medium text-purple-300 mb-1">✦ AI Brief</p>
@@ -297,7 +358,7 @@ export default function CampaignsPage() {
                   </div>
                 </div>
                 <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all mt-2 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
-                  Create Campaign
+                  {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
                 </button>
               </form>
             </motion.div>

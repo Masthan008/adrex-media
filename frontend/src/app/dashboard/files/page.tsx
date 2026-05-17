@@ -24,6 +24,9 @@ export default function FilesPage() {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [deleting, setDeleting] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchFiles = async () => {
@@ -63,13 +66,35 @@ export default function FilesPage() {
       });
 
       if (res.ok) {
-        await fetchFiles(); // Refresh list
+        await fetchFiles();
       }
     } catch (error) {
       console.error('Upload failed', error);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this file?')) return;
+    setDeleting(id);
+    try {
+      const token = localStorage.getItem('adrex_token');
+      const res = await fetch(`${API_URL}/api/files/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setFiles(prev => prev.filter(f => f.id !== id));
+      } else {
+        alert('Failed to delete file');
+      }
+    } catch (error) {
+      console.error('Delete failed', error);
+      alert('Failed to delete file');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -84,6 +109,15 @@ export default function FilesPage() {
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     else return (bytes / 1048576).toFixed(1) + ' MB';
   };
+
+  const filteredFiles = files.filter(f => {
+    const matchSearch = f.name.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = categoryFilter === 'All' ||
+      (categoryFilter === 'Documents' && (f.category === 'document' || f.type.includes('pdf'))) ||
+      (categoryFilter === 'Creatives' && f.category === 'creative') ||
+      (categoryFilter === 'Invoices' && f.category === 'invoice');
+    return matchSearch && matchCategory;
+  });
 
   return (
     <div className="space-y-6">
@@ -119,12 +153,22 @@ export default function FilesPage() {
           <input
             type="text"
             placeholder="Search files..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
           />
         </div>
         <div className="flex gap-2">
           {['All', 'Documents', 'Creatives', 'Invoices'].map((filter) => (
-            <button key={filter} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium text-zinc-300 transition-colors whitespace-nowrap">
+            <button
+              key={filter}
+              onClick={() => setCategoryFilter(filter)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
+                categoryFilter === filter
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300'
+              }`}
+            >
               {filter}
             </button>
           ))}
@@ -136,20 +180,26 @@ export default function FilesPage() {
         <div className="h-64 flex items-center justify-center">
           <Loader2 className="animate-spin text-purple-500" size={32} />
         </div>
-      ) : files.length === 0 ? (
+      ) : filteredFiles.length === 0 ? (
         <div className="glassmorphism rounded-2xl border border-white/10 p-12 text-center">
           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="text-zinc-500" size={32} />
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No files uploaded yet</h3>
-          <p className="text-zinc-400 mb-6">Upload your first contract, creative, or invoice.</p>
-          <button onClick={() => fileInputRef.current?.click()} className="text-purple-400 hover:text-purple-300 font-medium">
-            Browse files
-          </button>
+          <h3 className="text-lg font-medium text-white mb-2">
+            {search || categoryFilter !== 'All' ? 'No files match your filters' : 'No files uploaded yet'}
+          </h3>
+          <p className="text-zinc-400 mb-6">
+            {search || categoryFilter !== 'All' ? 'Try adjusting your search or filter criteria.' : 'Upload your first contract, creative, or invoice.'}
+          </p>
+          {!search && categoryFilter === 'All' && (
+            <button onClick={() => fileInputRef.current?.click()} className="text-purple-400 hover:text-purple-300 font-medium">
+              Browse files
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {files.map((file) => (
+          {filteredFiles.map((file) => (
             <motion.div
               key={file.id}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -169,8 +219,12 @@ export default function FilesPage() {
                   >
                     <Download size={16} />
                   </a>
-                  <button className="p-1.5 hover:bg-red-500/20 rounded-lg text-zinc-400 hover:text-red-400 ml-1">
-                    <Trash2 size={16} />
+                  <button
+                    onClick={() => handleDelete(file.id)}
+                    disabled={deleting === file.id}
+                    className="p-1.5 hover:bg-red-500/20 rounded-lg text-zinc-400 hover:text-red-400 ml-1 disabled:opacity-50"
+                  >
+                    {deleting === file.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                   </button>
                 </div>
               </div>

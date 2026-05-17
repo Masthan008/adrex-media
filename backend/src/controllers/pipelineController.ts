@@ -1,7 +1,20 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const LeadSchema = z.object({
+  companyName: z.string().min(2, 'Company name must be at least 2 characters'),
+  contactName: z.string().min(2, 'Contact name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
+  value: z.string().or(z.number()).optional(),
+  stage: z.enum(['LEAD', 'CONTACTED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']).optional(),
+  notes: z.string().optional(),
+});
+
+const LeadUpdateSchema = LeadSchema.partial();
 
 export const getLeads = async (req: Request, res: Response) => {
   try {
@@ -25,7 +38,12 @@ export const createLead = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { companyName, contactName, email, phone, value, stage, notes } = req.body;
+    const validation = LeadSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
+    const { companyName, contactName, email, phone, value, stage, notes } = validation.data;
 
     const newLead = await prisma.pipelineLead.create({
       data: {
@@ -34,7 +52,7 @@ export const createLead = async (req: Request, res: Response) => {
         contactName,
         email,
         phone,
-        value: parseFloat(value) || 0,
+        value: value ? parseFloat(String(value)) : 0,
         stage: stage || 'LEAD',
         notes
       }
@@ -52,19 +70,24 @@ export const updateLead = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const validation = LeadUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
     const { id } = req.params;
-    const { companyName, contactName, email, phone, value, stage, notes } = req.body;
+    const { companyName, contactName, email, phone, value, stage, notes } = validation.data;
 
     const updatedLead = await prisma.pipelineLead.update({
       where: { id, agencyId: user.agencyId },
       data: {
-        companyName,
-        contactName,
-        email,
-        phone,
-        value: value ? parseFloat(value) : undefined,
-        stage,
-        notes
+        ...(companyName && { companyName }),
+        ...(contactName && { contactName }),
+        ...(email && { email }),
+        ...(phone !== undefined && { phone }),
+        ...(value !== undefined && { value: parseFloat(String(value)) }),
+        ...(stage && { stage }),
+        ...(notes !== undefined && { notes })
       }
     });
 

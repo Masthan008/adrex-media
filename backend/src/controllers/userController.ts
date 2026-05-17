@@ -1,22 +1,35 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const ProfileUpdateSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters').optional(),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters').optional(),
+  bio: z.string().max(500, 'Bio must be under 500 characters').optional(),
+  phone: z.string().optional(),
+});
 
 export const updateProfile = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     if (!user || !user.id) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { firstName, lastName, bio, phone } = req.body;
+    const validation = ProfileUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
+    const { firstName, lastName, bio, phone } = validation.data;
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
-        firstName,
-        lastName,
-        bio,
-        phone,
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName }),
+        ...(bio !== undefined && { bio }),
+        ...(phone !== undefined && { phone }),
       },
       select: {
         id: true,
@@ -27,6 +40,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         bio: true,
         phone: true,
         agencyId: true,
+        avatar: true,
       }
     });
 

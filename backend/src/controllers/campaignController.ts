@@ -1,7 +1,20 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const CampaignSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  clientId: z.string().uuid('Invalid client ID'),
+  description: z.string().optional(),
+  budget: z.string().or(z.number()).optional(),
+  startDate: z.string().datetime().or(z.string().date()),
+  endDate: z.string().datetime().or(z.string().date()),
+  status: z.enum(['DRAFT', 'PLANNED', 'ACTIVE', 'PAUSED', 'COMPLETED']).optional(),
+});
+
+const CampaignUpdateSchema = CampaignSchema.partial();
 
 export const getCampaigns = async (req: Request, res: Response) => {
   try {
@@ -26,7 +39,12 @@ export const createCampaign = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { name, clientId, description, budget, startDate, endDate, status } = req.body;
+    const validation = CampaignSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
+    const { name, clientId, description, budget, startDate, endDate, status } = validation.data;
 
     const campaign = await prisma.campaign.create({
       data: {
@@ -34,7 +52,7 @@ export const createCampaign = async (req: Request, res: Response) => {
         clientId,
         name,
         description,
-        budget: budget ? parseFloat(budget) : 0,
+        budget: budget ? parseFloat(String(budget)) : 0,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         status: status || 'DRAFT'
@@ -54,8 +72,13 @@ export const updateCampaign = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const validation = CampaignUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
+
     const { id } = req.params;
-    const { name, clientId, description, budget, startDate, endDate, status } = req.body;
+    const { name, clientId, description, budget, startDate, endDate, status } = validation.data;
 
     const campaign = await prisma.campaign.update({
       where: { id, agencyId: user.agencyId },
@@ -63,7 +86,7 @@ export const updateCampaign = async (req: Request, res: Response) => {
         ...(name && { name }),
         ...(clientId && { clientId }),
         ...(description !== undefined && { description }),
-        ...(budget !== undefined && { budget: parseFloat(budget) }),
+        ...(budget !== undefined && { budget: parseFloat(String(budget)) }),
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
         ...(status && { status })
