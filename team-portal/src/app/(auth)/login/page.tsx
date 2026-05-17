@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL, ADMIN_URL } from '@/lib/config';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -23,7 +24,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -133,7 +134,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground mt-7">
           Need admin access?{' '}
-          <Link href="http://localhost:3000/login" className="text-primary hover:underline font-medium">
+          <Link href={`${ADMIN_URL}/login`} className="text-primary hover:underline font-medium">
             Go to Admin Dashboard
           </Link>
         </p>
