@@ -1,8 +1,7 @@
 'use client';
 
 import { Bell, Search, ChevronDown, Settings, LogOut, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
 import { useRouter } from 'next/navigation';
@@ -18,19 +17,18 @@ interface BackendNotification {
   createdAt: string;
 }
 
-const dropdownBase = "absolute right-0 top-12 z-50 rounded-2xl border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl bg-zinc-900/95";
-
 export default function TopNav() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState<BackendNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
   const { user, logout } = useAuthStore();
   const { socket } = useSocketStore();
   const router = useRouter();
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const token = localStorage.getItem('adrex_token');
       const res = await fetch(`${API_URL}/api/notifications`, {
@@ -44,16 +42,16 @@ export default function TopNav() {
     } catch (error) {
       console.error('Failed to fetch notifications', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
   useEffect(() => {
     if (!socket) return;
     
-    const handleNewNotification = async (notif: any) => {
+    const handleNewNotification = async () => {
       await fetchNotifications();
     };
 
@@ -61,7 +59,17 @@ export default function TopNav() {
     return () => {
       socket.off('receive_notification', handleNewNotification);
     };
-  }, [socket]);
+  }, [socket, fetchNotifications]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const markAsRead = async (id: string) => {
     try {
@@ -129,7 +137,7 @@ export default function TopNav() {
 
       <div className="flex items-center gap-3">
         {/* Notifications */}
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button
             id="notif-btn"
             onClick={() => { setShowNotifs(p => !p); setShowProfile(false); if (!showNotifs) fetchNotifications(); }}
@@ -143,56 +151,45 @@ export default function TopNav() {
             )}
           </button>
 
-          <AnimatePresence>
-            {showNotifs && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  transition={{ duration: 0.15 }}
-                  className={`${dropdownBase} w-96 max-h-[480px] flex flex-col`}
-                >
-                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
-                    <span className="text-sm font-semibold text-white">Notifications</span>
-                    <span className="text-xs text-purple-400 font-medium">{unreadCount} unread</span>
-                  </div>
-                  <div className="overflow-y-auto flex-1">
-                    {notifications.length === 0 ? (
-                      <div className="p-6 text-center text-sm text-zinc-500">No notifications</div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div key={n.id} onClick={() => markAsRead(n.id)} className={`px-4 py-3 border-b border-white/8 last:border-0 hover:bg-white/5 transition-all cursor-pointer ${!n.isRead ? 'bg-purple-500/8' : ''}`}>
-                          <div className="flex items-start gap-2.5">
-                            {!n.isRead && <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-1.5 shrink-0" />}
-                            {n.isRead && <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" />}
-                            <div>
-                              {n.title && <p className="text-xs font-medium text-purple-300">{n.title}</p>}
-                              <p className="text-sm text-white leading-snug">{n.message}</p>
-                              <p className="text-xs text-zinc-500 mt-0.5">{timeAgo(n.createdAt)}</p>
-                            </div>
-                          </div>
+          {showNotifs && (
+            <div className="absolute right-0 top-12 z-50 w-96 max-h-[480px] flex flex-col rounded-2xl border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl bg-zinc-900/95 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
+                <span className="text-sm font-semibold text-white">Notifications</span>
+                <span className="text-xs text-purple-400 font-medium">{unreadCount} unread</span>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-zinc-500">No notifications</div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} onClick={() => markAsRead(n.id)} className={`px-4 py-3 border-b border-white/8 last:border-0 hover:bg-white/5 transition-all cursor-pointer ${!n.isRead ? 'bg-purple-500/8' : ''}`}>
+                      <div className="flex items-start gap-2.5">
+                        {!n.isRead && <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-1.5 shrink-0" />}
+                        {n.isRead && <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" />}
+                        <div>
+                          {n.title && <p className="text-xs font-medium text-purple-300">{n.title}</p>}
+                          <p className="text-sm text-white leading-snug">{n.message}</p>
+                          <p className="text-xs text-zinc-500 mt-0.5">{timeAgo(n.createdAt)}</p>
                         </div>
-                      ))
-                    )}
-                  </div>
-                  {unreadCount > 0 && (
-                    <div className="px-4 py-2.5 border-t border-white/10 shrink-0">
-                      <button onClick={markAllAsRead} className="text-xs text-purple-400 hover:text-purple-300 transition-colors w-full text-center">Mark all as read</button>
+                      </div>
                     </div>
-                  )}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+                  ))
+                )}
+              </div>
+              {unreadCount > 0 && (
+                <div className="px-4 py-2.5 border-t border-white/10 shrink-0">
+                  <button onClick={markAllAsRead} className="text-xs text-purple-400 hover:text-purple-300 transition-colors w-full text-center">Mark all as read</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Divider */}
         <div className="w-px h-6 bg-white/10" />
 
         {/* Profile */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             id="profile-btn"
             onClick={() => { setShowProfile(p => !p); setShowNotifs(false); }}
@@ -208,60 +205,49 @@ export default function TopNav() {
             <ChevronDown size={14} className="text-zinc-500" />
           </button>
 
-          <AnimatePresence>
-            {showProfile && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowProfile(false)} />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  transition={{ duration: 0.15 }}
-                  className={`${dropdownBase} w-56`}
-                >
-                  <div className="px-4 py-3 border-b border-white/10">
-                    <div className="flex items-center gap-2.5 mb-1">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
-                        {displayInitial}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">{displayName}</p>
-                        <p className="text-xs text-zinc-500">{displayEmail}</p>
-                      </div>
-                    </div>
+          {showProfile && (
+            <div className="absolute right-0 top-12 z-50 w-56 rounded-2xl border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl bg-zinc-900/95 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-4 py-3 border-b border-white/10">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                    {displayInitial}
                   </div>
-                  <div className="p-1.5">
-                    {[
-                      { label: 'Profile Settings', icon: User, href: '/dashboard/settings' },
-                      { label: 'Agency Settings', icon: Settings, href: '/dashboard/settings?tab=agency' },
-                    ].map(item => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.label}
-                          href={item.href}
-                          onClick={() => setShowProfile(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/8 transition-all text-zinc-300 hover:text-white"
-                        >
-                          <Icon size={14} className="text-zinc-500" />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
+                  <div>
+                    <p className="text-sm font-semibold text-white">{displayName}</p>
+                    <p className="text-xs text-zinc-500">{displayEmail}</p>
                   </div>
-                  <div className="border-t border-white/10 p-1.5">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-red-500/10 transition-all text-red-400 hover:text-red-300"
+                </div>
+              </div>
+              <div className="p-1.5">
+                {[
+                  { label: 'Profile Settings', icon: User, href: '/dashboard/settings' },
+                  { label: 'Agency Settings', icon: Settings, href: '/dashboard/settings?tab=agency' },
+                ].map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setShowProfile(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/8 transition-all text-zinc-300 hover:text-white"
                     >
-                      <LogOut size={14} />
-                      Sign out
-                    </button>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+                      <Icon size={14} className="text-zinc-500" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+              <div className="border-t border-white/10 p-1.5">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-red-500/10 transition-all text-red-400 hover:text-red-300"
+                >
+                  <LogOut size={14} />
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

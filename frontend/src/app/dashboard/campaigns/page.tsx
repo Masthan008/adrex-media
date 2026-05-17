@@ -1,8 +1,7 @@
 'use client';
 
 import { API_URL } from '@/lib/api';
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus, Search, Target, MoreHorizontal, Megaphone, X, Sparkles, Loader2
 } from 'lucide-react';
@@ -34,12 +33,10 @@ export default function CampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [newCamp, setNewCamp] = useState({ name: '', clientId: '', budget: '', status: 'DRAFT', startDate: '', endDate: '', description: '' });
-  
-  // AI state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem('adrex_token');
       const headers = { 'Authorization': `Bearer ${token}` };
@@ -54,9 +51,9 @@ export default function CampaignsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,14 +164,14 @@ export default function CampaignsPage() {
     }
   };
 
-  const filtered = campaigns.filter(c => {
+  const filtered = useMemo(() => campaigns.filter(c => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.client?.companyName.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'ALL' || c.status === statusFilter;
     return matchSearch && matchStatus;
-  });
+  }), [campaigns, search, statusFilter]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Campaigns</h1>
@@ -193,12 +190,11 @@ export default function CampaignsPage() {
           { label: 'Total Budget', value: loading ? '-' : `₹${campaigns.reduce((a,c) => a + c.budget, 0).toLocaleString('en-IN')}`, sub: 'Allocated' },
           { label: 'Completed', value: loading ? '-' : campaigns.filter(c => c.status === 'COMPLETED').length, sub: 'Finished' },
         ].map((s, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-            className="p-4 rounded-xl glassmorphism">
+          <div key={i} className="p-4 rounded-xl glassmorphism">
             <p className="text-xs text-muted-foreground">{s.label}</p>
             <p className="text-2xl font-bold mt-1">{s.value}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{s.sub}</p>
-          </motion.div>
+          </div>
         ))}
       </div>
 
@@ -219,7 +215,7 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      <motion.div className="glassmorphism rounded-2xl overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+      <div className="glassmorphism rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -233,138 +229,130 @@ export default function CampaignsPage() {
               </tr>
             </thead>
             <tbody>
-              <AnimatePresence>
-                {loading ? (
-                  <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground animate-pulse">Loading campaigns...</td></tr>
-                ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="px-6 py-16 text-center text-muted-foreground">
-                    <Target size={40} className="mx-auto mb-3 opacity-30" />
-                    <p>No campaigns found. Create one above!</p>
-                  </td></tr>
-                ) : filtered.map((c, i) => {
-                  const st = statusConfig[c.status] || statusConfig.DRAFT;
-                  return (
-                    <motion.tr key={c.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.04 }}
-                      className="border-b border-border/30 hover:bg-white/3 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center text-primary"><Megaphone size={16} /></div>
-                          <span className="font-medium">{c.name}</span>
+              {loading ? (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground animate-pulse">Loading campaigns...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={6} className="px-6 py-16 text-center text-muted-foreground">
+                  <Target size={40} className="mx-auto mb-3 opacity-30" />
+                  <p>No campaigns found. Create one above!</p>
+                </td></tr>
+              ) : filtered.map((c) => {
+                const st = statusConfig[c.status] || statusConfig.DRAFT;
+                return (
+                  <tr key={c.id} className="border-b border-border/30 hover:bg-white/3 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center text-primary"><Megaphone size={16} /></div>
+                        <span className="font-medium">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">{c.client?.companyName}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${st.color} ${st.bg}`}>{st.label}</span>
+                    </td>
+                    <td className="px-6 py-4 font-medium">₹{c.budget.toLocaleString('en-IN')}</td>
+                    <td className="px-6 py-4 text-muted-foreground text-xs">
+                      {new Date(c.startDate).toLocaleDateString()} → {new Date(c.endDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="relative group/more">
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(c); }} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all">
+                          <MoreHorizontal size={16} />
+                        </button>
+                        <div className="absolute right-0 top-full mt-1 w-36 bg-zinc-900 border border-white/10 rounded-xl shadow-xl opacity-0 invisible group-hover/more:opacity-100 group-hover/more:visible transition-all z-10">
+                          <button onClick={() => openEditModal(c)} className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 rounded-t-xl">Edit</button>
+                          <button onClick={() => handleDelete(c.id)} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-b-xl">Delete</button>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">{c.client?.companyName}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${st.color} ${st.bg}`}>{st.label}</span>
-                      </td>
-                      <td className="px-6 py-4 font-medium">₹{c.budget.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-muted-foreground text-xs">
-                        {new Date(c.startDate).toLocaleDateString()} → {new Date(c.endDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="relative group/more">
-                          <button onClick={(e) => { e.stopPropagation(); openEditModal(c); }} className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all">
-                            <MoreHorizontal size={16} />
-                          </button>
-                          <div className="absolute right-0 top-full mt-1 w-36 bg-zinc-900 border border-white/10 rounded-xl shadow-xl opacity-0 invisible group-hover/more:opacity-100 group-hover/more:visible transition-all z-10">
-                            <button onClick={() => openEditModal(c)} className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 rounded-t-xl">Edit</button>
-                            <button onClick={() => handleDelete(c.id)} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-b-xl">Delete</button>
-                          </div>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </AnimatePresence>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      </motion.div>
+      </div>
 
-      {/* New Campaign Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowModal(false); setAiSuggested(false); setEditingCampaign(null); }} />
-            <motion.div className="relative z-10 w-full max-w-lg bg-zinc-900/95 border border-white/15 rounded-2xl p-8 shadow-2xl"
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold">{editingCampaign ? 'Edit Campaign' : 'New Campaign'}</h2>
-                  <p className="text-sm text-zinc-500 mt-0.5">{editingCampaign ? 'Update the campaign details.' : 'Fill in the details or use AI to spark ideas.'}</p>
-                </div>
-                <button onClick={() => { setShowModal(false); setAiSuggested(false); setEditingCampaign(null); }} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowModal(false); setAiSuggested(false); setEditingCampaign(null); }} />
+          <div className="relative z-10 w-full max-w-lg bg-zinc-900/95 border border-white/15 rounded-2xl p-8 shadow-2xl animate-in slide-in-from-bottom-2">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">{editingCampaign ? 'Edit Campaign' : 'New Campaign'}</h2>
+                <p className="text-sm text-zinc-500 mt-0.5">{editingCampaign ? 'Update the campaign details.' : 'Fill in the details or use AI to spark ideas.'}</p>
+              </div>
+              <button onClick={() => { setShowModal(false); setAiSuggested(false); setEditingCampaign(null); }} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
+            </div>
+
+            <form className="space-y-4" onSubmit={editingCampaign ? handleUpdate : handleCreate}>
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-zinc-300">Client</label>
+                <select value={newCamp.clientId} onChange={e => setNewCamp(p => ({ ...p, clientId: e.target.value }))} required
+                  className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all">
+                  <option value="" disabled>Select a client</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
+                </select>
               </div>
 
-              <form className="space-y-4" onSubmit={editingCampaign ? handleUpdate : handleCreate}>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Client</label>
-                  <select value={newCamp.clientId} onChange={e => setNewCamp(p => ({ ...p, clientId: e.target.value }))} required
-                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all">
-                    <option value="" disabled>Select a client</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                  </select>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-zinc-300">Campaign Name</label>
+                  {!editingCampaign && (
+                    <button type="button" onClick={handleAIGenerate} disabled={aiLoading}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 transition-all disabled:opacity-50">
+                      {aiLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                      {aiLoading ? 'Generating...' : '✦ Spark with AI'}
+                    </button>
+                  )}
                 </div>
+                <input value={newCamp.name} onChange={e => setNewCamp(p => ({ ...p, name: e.target.value }))} type="text" placeholder="e.g. Summer Glow 2025" required
+                  className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
+              </div>
 
+              {!editingCampaign && aiSuggested && newCamp.description && (
+                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                  <p className="text-xs font-medium text-purple-300 mb-1">✦ AI Brief</p>
+                  <p className="text-xs text-zinc-400 leading-relaxed">{newCamp.description}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-sm font-medium text-zinc-300">Campaign Name</label>
-                    {!editingCampaign && (
-                      <button type="button" onClick={handleAIGenerate} disabled={aiLoading}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 transition-all disabled:opacity-50">
-                        {aiLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                        {aiLoading ? 'Generating...' : '✦ Spark with AI'}
-                      </button>
-                    )}
-                  </div>
-                  <input value={newCamp.name} onChange={e => setNewCamp(p => ({ ...p, name: e.target.value }))} type="text" placeholder="e.g. Summer Glow 2025" required
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Budget ($)</label>
+                  <input value={newCamp.budget} onChange={e => setNewCamp(p => ({ ...p, budget: e.target.value }))} type="number" placeholder="50000" required
                     className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
                 </div>
-
-                {!editingCampaign && aiSuggested && newCamp.description && (
-                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                    className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                    <p className="text-xs font-medium text-purple-300 mb-1">✦ AI Brief</p>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{newCamp.description}</p>
-                  </motion.div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 text-zinc-300">Budget ($)</label>
-                    <input value={newCamp.budget} onChange={e => setNewCamp(p => ({ ...p, budget: e.target.value }))} type="number" placeholder="50000" required
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 text-zinc-300">Status</label>
-                    <select value={newCamp.status} onChange={e => setNewCamp(p => ({ ...p, status: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all">
-                      <option value="DRAFT">DRAFT</option>
-                      <option value="PLANNED">PLANNED</option>
-                      <option value="ACTIVE">ACTIVE</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Status</label>
+                  <select value={newCamp.status} onChange={e => setNewCamp(p => ({ ...p, status: e.target.value }))}
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all">
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="PLANNED">PLANNED</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                  </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 text-zinc-300">Start Date</label>
-                    <input value={newCamp.startDate} onChange={e => setNewCamp(p => ({ ...p, startDate: e.target.value }))} type="date" required
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 text-zinc-300">End Date</label>
-                    <input value={newCamp.endDate} onChange={e => setNewCamp(p => ({ ...p, endDate: e.target.value }))} type="date" required
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
-                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">Start Date</label>
+                  <input value={newCamp.startDate} onChange={e => setNewCamp(p => ({ ...p, startDate: e.target.value }))} type="date" required
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
                 </div>
-                <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all mt-2 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
-                  {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-300">End Date</label>
+                  <input value={newCamp.endDate} onChange={e => setNewCamp(p => ({ ...p, endDate: e.target.value }))} type="date" required
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
+                </div>
+              </div>
+              <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all mt-2 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

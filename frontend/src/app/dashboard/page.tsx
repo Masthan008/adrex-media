@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  LayoutDashboard, Megaphone, Users, Briefcase, DollarSign,
-  TrendingUp, Activity, ArrowUpRight, Zap, Bell, ChevronRight, Sparkles
+  Megaphone, Users, Briefcase, Activity,
+  ArrowUpRight, DollarSign, ChevronRight, Sparkles
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
@@ -25,6 +25,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   }
   return null;
 };
+
+const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3 } };
+const staggerContainer = { animate: { transition: { staggerChildren: 0.06 } } };
 
 function DashboardContent() {
   const router = useRouter();
@@ -55,26 +58,26 @@ function DashboardContent() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  const kpiCards = [
+  const kpiCards = useMemo(() => [
     { label: 'Active Campaigns', value: stats.activeCampaigns, icon: Megaphone, color: 'text-purple-400', bg: 'from-purple-500/20 to-purple-500/5' },
     { label: 'Total Clients', value: stats.clients, icon: Briefcase, color: 'text-blue-400', bg: 'from-blue-500/20 to-blue-500/5' },
     { label: 'Influencers', value: stats.influencers, icon: Users, color: 'text-emerald-400', bg: 'from-emerald-500/20 to-emerald-500/5' },
     { label: 'Open Tasks', value: stats.tasks, icon: Activity, color: 'text-amber-400', bg: 'from-amber-500/20 to-amber-500/5' },
-  ];
+  ], [stats]);
 
-  const quickLinks = [
+  const quickLinks = useMemo(() => [
     { href: '/dashboard/campaigns', label: 'Create Campaign', icon: Megaphone, color: 'bg-purple-500' },
     { href: '/dashboard/influencers', label: 'Add Influencer', icon: Users, color: 'bg-blue-500' },
-    { href: '/dashboard/pipeline', label: 'View Pipeline', icon: TrendingUp, color: 'bg-emerald-500' },
+    { href: '/dashboard/pipeline', label: 'View Pipeline', icon: ArrowUpRight, color: 'bg-emerald-500' },
     { href: '/dashboard/ai', label: 'AI Tools', icon: Sparkles, color: 'bg-gradient-to-r from-purple-500 to-blue-500' },
-  ];
+  ], []);
 
   const hasRevenueData = monthlyRevenue.some(m => m.revenue > 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+      <motion.div {...fadeIn}>
         <h1 className="text-3xl font-bold tracking-tight">
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.firstName}
         </h1>
@@ -82,28 +85,26 @@ function DashboardContent() {
       </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <motion.div className="grid grid-cols-2 xl:grid-cols-4 gap-4" variants={staggerContainer} initial="initial" animate="animate">
         {kpiCards.map((card, i) => {
           const Icon = card.icon;
           return (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-              className={`p-5 rounded-2xl bg-gradient-to-br ${card.bg} border border-white/10 relative overflow-hidden`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center ${card.color}`}>
-                  <Icon size={20} />
-                </div>
+            <motion.div key={i} variants={fadeIn}
+              className={`p-5 rounded-2xl bg-gradient-to-br ${card.bg} border border-white/10`}>
+              <div className={`w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center ${card.color}`}>
+                <Icon size={20} />
               </div>
-              <p className="text-3xl font-bold text-white">{loading ? '—' : card.value}</p>
+              <p className="text-3xl font-bold text-white mt-3">{loading ? '—' : card.value}</p>
               <p className="text-sm text-zinc-400 mt-1">{card.label}</p>
             </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
       {/* Charts + Quick Actions */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+        <motion.div {...fadeIn}
           className="xl:col-span-2 glassmorphism rounded-2xl p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -138,7 +139,7 @@ function DashboardContent() {
         </motion.div>
 
         {/* Quick Actions */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+        <motion.div {...fadeIn}
           className="glassmorphism rounded-2xl p-6">
           <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
           <div className="space-y-3">
@@ -172,7 +173,7 @@ function DashboardContent() {
       {/* Recent Activity + Campaigns Row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+        <motion.div {...fadeIn}
           className="glassmorphism rounded-2xl p-6">
           <h3 className="font-semibold text-white mb-4">Recent Activity</h3>
           {recentActivity.length === 0 ? (
@@ -194,7 +195,7 @@ function DashboardContent() {
         </motion.div>
 
         {/* Recent Campaigns */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+        <motion.div {...fadeIn}
           className="glassmorphism rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white">Recent Campaigns</h3>

@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -13,10 +15,24 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
+// Ensure upload directories exist on startup
+const UPLOAD_DIRS = [
+  path.join(__dirname, '../uploads'),
+  path.join(__dirname, '../uploads/avatars'),
+  path.join(__dirname, '../uploads/logos'),
+];
+
+UPLOAD_DIRS.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`Created upload directory: ${dir}`);
+  }
+});
+
 // Rate Limiter configuration
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 
@@ -38,10 +54,8 @@ app.use(cors({
 }));
 app.use(morgan('dev'));
 
-import path from 'path';
-
 // Serve uploads statically
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 import authRoutes from './routes/auth';
 import influencerRoutes from './routes/influencers';
@@ -92,10 +106,10 @@ import { setupSocketIO } from './socket';
 const httpServer = createServer(app);
 const io = setupSocketIO(httpServer);
 
-// Make io accessible globally if needed in controllers (optional)
 app.set('io', io);
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 Backend Server running on http://localhost:${PORT}`);
   console.log(`🔌 WebSockets enabled on port ${PORT}`);
+  console.log(`📁 Upload directories ready`);
 });
