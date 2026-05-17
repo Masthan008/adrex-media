@@ -34,6 +34,7 @@ model Agency {
   files           File[]
   whatsappMessages WhatsAppMessage[]
   announcements   Announcement[]
+  aiChats         AIChat[]
 }
 
 enum Role {
@@ -72,6 +73,7 @@ model User {
   receivedMessages    Message[] @relation("ReceivedMessages")
   files               File[]
   assignedTasks       Task[]    @relation("TaskAssignee")
+  aiChats             AIChat[]  @relation("AIChatUser")
 }
 
 model Influencer {
@@ -300,4 +302,16 @@ model Announcement {
   createdBy   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model AIChat {
+  id        String   @id @default(uuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, name: "AIChatUser")
+  tool      String   // campaign, caption, outreach, strategy, chat
+  prompt    String
+  result    String
+  createdAt DateTime @default(now())
 }

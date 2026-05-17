@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { aiService } from '../services/aiService';
+
+const prisma = new PrismaClient();
 
 function unauthorized(res: Response) {
   return res.status(401).json({ error: 'Authentication required' });
@@ -17,6 +20,46 @@ function serverError(res: Response, error: any, context: string) {
   }
   return res.status(500).json({ error: `AI generation failed: ${msg}` });
 }
+
+async function saveChat(userId: string, agencyId: string, tool: string, prompt: string, result: string) {
+  try {
+    await prisma.aIChat.create({
+      data: { userId, agencyId, tool, prompt, result }
+    });
+  } catch (e) {
+    console.error('Failed to save AI chat:', e);
+  }
+}
+
+export const getChatHistory = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user?.userId) return unauthorized(res);
+
+    const chats = await prisma.aIChat.findMany({
+      where: { userId: user.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    res.json(chats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch chat history' });
+  }
+};
+
+export const deleteChat = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user?.userId) return unauthorized(res);
+
+    const { id } = req.params;
+    await prisma.aIChat.delete({ where: { id, userId: user.userId } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+};
 
 export const generateCampaignIdea = async (req: Request, res: Response) => {
   try {
@@ -66,7 +109,10 @@ Include these sections:
       maxTokens: 1500,
     });
 
-    return res.json({ result: result.content.trim() });
+    const trimmed = result.content.trim();
+    await saveChat(user.userId, user.agencyId, 'campaign', input, trimmed);
+
+    return res.json({ result: trimmed });
   } catch (error: any) {
     return serverError(res, error, 'campaign-idea');
   }
@@ -88,7 +134,10 @@ export const generateCaption = async (req: Request, res: Response) => {
       maxTokens: 1000,
     });
 
-    return res.json({ result: result.content.trim() });
+    const trimmed = result.content.trim();
+    await saveChat(user.userId, user.agencyId, 'caption', input, trimmed);
+
+    return res.json({ result: trimmed });
   } catch (error: any) {
     return serverError(res, error, 'caption');
   }
@@ -124,7 +173,10 @@ Write both a DM version (short, casual) and an Email version (professional, deta
       maxTokens: 1200,
     });
 
-    return res.json({ result: result.content.trim() });
+    const trimmed = result.content.trim();
+    await saveChat(user.userId, user.agencyId, 'outreach', input, trimmed);
+
+    return res.json({ result: trimmed });
   } catch (error: any) {
     return serverError(res, error, 'outreach');
   }
@@ -146,7 +198,10 @@ export const generateStrategy = async (req: Request, res: Response) => {
       maxTokens: 2000,
     });
 
-    return res.json({ result: result.content.trim() });
+    const trimmed = result.content.trim();
+    await saveChat(user.userId, user.agencyId, 'strategy', input, trimmed);
+
+    return res.json({ result: trimmed });
   } catch (error: any) {
     return serverError(res, error, 'strategy');
   }
@@ -167,7 +222,10 @@ export const chatWithAI = async (req: Request, res: Response) => {
       maxTokens: 1500,
     });
 
-    return res.json({ result: result.content.trim(), response: result.content.trim() });
+    const trimmed = result.content.trim();
+    await saveChat(user.userId, user.agencyId, 'chat', prompt, trimmed);
+
+    return res.json({ result: trimmed, response: trimmed });
   } catch (error: any) {
     return serverError(res, error, 'chat');
   }
