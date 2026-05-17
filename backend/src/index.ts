@@ -26,8 +26,14 @@ app.use('/api', apiLimiter);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', process.env.FRONTEND_URL || ''].filter(Boolean),
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(morgan('dev'));

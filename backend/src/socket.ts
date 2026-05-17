@@ -14,9 +14,15 @@ export interface AuthenticatedSocket extends Socket {
 }
 
 export const setupSocketIO = (httpServer: HttpServer) => {
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: ['http://localhost:3000', 'http://localhost:3001'],
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true
     }
