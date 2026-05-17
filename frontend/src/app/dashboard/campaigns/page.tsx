@@ -136,7 +136,7 @@ export default function CampaignsPage() {
         {[
           { label: 'Total Campaigns', value: loading ? '-' : campaigns.length, sub: 'All time' },
           { label: 'Active Now', value: loading ? '-' : campaigns.filter(c => c.status === 'ACTIVE').length, sub: 'Running' },
-          { label: 'Total Budget', value: loading ? '-' : `$${campaigns.reduce((a,c) => a + c.budget, 0).toLocaleString()}`, sub: 'Allocated' },
+          { label: 'Total Budget', value: loading ? '-' : `₹${campaigns.reduce((a,c) => a + c.budget, 0).toLocaleString('en-IN')}`, sub: 'Allocated' },
           { label: 'Completed', value: loading ? '-' : campaigns.filter(c => c.status === 'COMPLETED').length, sub: 'Finished' },
         ].map((s, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -202,7 +202,7 @@ export default function CampaignsPage() {
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${st.color} ${st.bg}`}>{st.label}</span>
                       </td>
-                      <td className="px-6 py-4 font-medium">${c.budget.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-medium">₹{c.budget.toLocaleString('en-IN')}</td>
                       <td className="px-6 py-4 text-muted-foreground text-xs">
                         {new Date(c.startDate).toLocaleDateString()} → {new Date(c.endDate).toLocaleDateString()}
                       </td>

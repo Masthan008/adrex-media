@@ -23,7 +23,7 @@ export default function TopNav() {
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     { id: '1', text: 'Task "Draft contracts" is overdue', time: '3h ago', unread: true },
-    { id: '2', text: 'Client NovaTech added $10K to budget', time: '1h ago', unread: false },
+    { id: '2', text: 'Client NovaTech added ₹10L to budget', time: '1h ago', unread: false },
   ]);
   const { user, logout } = useAuthStore();
   const { socket } = useSocketStore();

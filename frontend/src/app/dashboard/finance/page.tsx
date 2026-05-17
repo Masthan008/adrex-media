@@ -100,10 +100,10 @@ export default function FinancePage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-400', glow: 'shadow-emerald-500/10' },
-          { label: 'Outstanding', value: `$${outstanding.toLocaleString()}`, icon: Receipt, color: 'text-amber-400', glow: 'shadow-amber-500/10' },
-          { label: 'Total Expenses', value: `$${totalExpenses.toLocaleString()}`, icon: TrendingDown, color: 'text-red-400', glow: 'shadow-red-500/10' },
-          { label: 'Net Profit', value: `$${profit.toLocaleString()}`, icon: TrendingUp, color: profit >= 0 ? 'text-emerald-400' : 'text-red-400', glow: 'shadow-purple-500/10' },
+          { label: 'Total Revenue', value: `₹${totalRevenue.toLocaleString('en-IN')}`, icon: DollarSign, color: 'text-emerald-400', glow: 'shadow-emerald-500/10' },
+          { label: 'Outstanding', value: `₹${outstanding.toLocaleString('en-IN')}`, icon: Receipt, color: 'text-amber-400', glow: 'shadow-amber-500/10' },
+          { label: 'Total Expenses', value: `₹${totalExpenses.toLocaleString('en-IN')}`, icon: TrendingDown, color: 'text-red-400', glow: 'shadow-red-500/10' },
+          { label: 'Net Profit', value: `₹${profit.toLocaleString('en-IN')}`, icon: TrendingUp, color: profit >= 0 ? 'text-emerald-400' : 'text-red-400', glow: 'shadow-purple-500/10' },
         ].map((k, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
             className={`p-5 rounded-2xl glassmorphism flex items-center gap-4 shadow-lg ${k.glow}`}>
@@ -139,7 +139,7 @@ export default function FinancePage() {
                : invoices.map(inv => (
                 <tr key={inv.id} className="border-b border-white/5 hover:bg-white/5 group transition-colors">
                   <td className="px-6 py-4 font-medium text-white">{inv.client?.companyName}</td>
-                  <td className="px-6 py-4 text-emerald-400 font-semibold">${inv.amount.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-emerald-400 font-semibold">₹{inv.amount.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4">
                     <select value={inv.status} onChange={e => updateInvoiceStatus(inv.id, e.target.value)} className={`px-2.5 py-1 rounded-full text-xs font-semibold border bg-transparent cursor-pointer ${statusColors[inv.status]}`}>
                       {['DRAFT','SENT','PAID','OVERDUE'].map(s => <option key={s} value={s}>{s}</option>)}
@@ -174,7 +174,7 @@ export default function FinancePage() {
                : expenses.map(exp => (
                 <tr key={exp.id} className="border-b border-white/5 hover:bg-white/5 group transition-colors">
                   <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold">{exp.category}</span></td>
-                  <td className="px-6 py-4 text-red-400 font-semibold">-${exp.amount.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-red-400 font-semibold">-₹{exp.amount.toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-zinc-400 text-xs">{exp.description || '—'}</td>
                   <td className="px-6 py-4 text-zinc-400 text-xs">{new Date(exp.date).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-right"><button onClick={() => deleteExpense(exp.id)} className="p-2 rounded-lg text-zinc-600 hover:bg-red-500/10 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button></td>
@@ -203,7 +203,7 @@ export default function FinancePage() {
                       <option value="">Select client...</option>
                       {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
                     </select></div>
-                  <div><label className="block text-xs text-zinc-400 mb-1.5">Amount ($)*</label>
+                  <div><label className="block text-xs text-zinc-400 mb-1.5">Amount (₹)*</label>
                     <input type="number" required value={invoiceForm.amount} onChange={e => setInvoiceForm(p => ({...p, amount: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className="block text-xs text-zinc-400 mb-1.5">Status</label>
@@ -225,7 +225,7 @@ export default function FinancePage() {
                       <option value="">Select category...</option>
                       {['Influencer Payout','Advertising','Software','Salaries','Office','Travel','Marketing','Other'].map(c => <option key={c} value={c}>{c}</option>)}
                     </select></div>
-                  <div><label className="block text-xs text-zinc-400 mb-1.5">Amount ($)*</label>
+                  <div><label className="block text-xs text-zinc-400 mb-1.5">Amount (₹)*</label>
                     <input type="number" required value={expenseForm.amount} onChange={e => setExpenseForm(p => ({...p, amount: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>
                   <div><label className="block text-xs text-zinc-400 mb-1.5">Description</label>
                     <input value={expenseForm.description} onChange={e => setExpenseForm(p => ({...p, description: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>

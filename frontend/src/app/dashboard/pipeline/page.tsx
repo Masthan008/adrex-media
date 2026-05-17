@@ -83,8 +83,8 @@ export default function PipelinePage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Pipeline Value', value: `$${totalPipelineValue.toLocaleString()}`, icon: DollarSign, color: 'text-blue-400' },
-          { label: 'Closed Won', value: `$${wonValue.toLocaleString()}`, icon: Trophy, color: 'text-emerald-400' },
+          { label: 'Pipeline Value', value: `₹${totalPipelineValue.toLocaleString('en-IN')}`, icon: DollarSign, color: 'text-blue-400' },
+          { label: 'Closed Won', value: `₹${wonValue.toLocaleString('en-IN')}`, icon: Trophy, color: 'text-emerald-400' },
           { label: 'Win Rate', value: `${winRate}%`, icon: TrendingUp, color: 'text-purple-400' },
         ].map((kpi, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
@@ -109,7 +109,7 @@ export default function PipelinePage() {
               <div className="flex items-center justify-between mb-1">
                 <div>
                   <p className={`text-xs font-semibold ${stage.color}`}>{stage.label}</p>
-                  <p className="text-[10px] text-zinc-500">${stageValue.toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500">₹{stageValue.toLocaleString('en-IN')}</p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${stage.bg} ${stage.color} font-bold`}>{stageLeads.length}</span>
               </div>
@@ -127,7 +127,7 @@ export default function PipelinePage() {
                     <p className="text-xs text-zinc-400 mt-0.5 truncate">{lead.contactName}</p>
                     <div className="flex items-center gap-1 mt-2">
                       <DollarSign size={10} className="text-emerald-400" />
-                      <span className="text-xs font-semibold text-emerald-400">${lead.value.toLocaleString()}</span>
+                      <span className="text-xs font-semibold text-emerald-400">₹{lead.value.toLocaleString('en-IN')}</span>
                     </div>
                     {lead.email && (
                       <div className="flex items-center gap-1 mt-1.5 text-zinc-500">
@@ -169,7 +169,7 @@ export default function PipelinePage() {
                   <div><label className="block text-xs text-zinc-400 mb-1.5">Phone</label><input value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-xs text-zinc-400 mb-1.5">Deal Value ($)</label><input type="number" value={form.value} onChange={e => setForm(p => ({...p, value: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>
+                  <div><label className="block text-xs text-zinc-400 mb-1.5">Deal Value (₹)</label><input type="number" value={form.value} onChange={e => setForm(p => ({...p, value: e.target.value}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50" /></div>
                   <div><label className="block text-xs text-zinc-400 mb-1.5">Stage</label>
                     <select value={form.stage} onChange={e => setForm(p => ({...p, stage: e.target.value as Stage}))} className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50">
                       {stages.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}

@@ -1,0 +1,81 @@
+services:
+  # Backend API
+  - type: web
+    name: adrex-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: adrex-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: adrex-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_NUMBER
+        value: whatsapp:+14155238886
+      - key: SMTP_HOST
+        value: smtp.ethereal.email
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+    healthCheckPath: /api/health
+
+  # Admin Frontend
+  - type: web
+    name: adrex-admin
+    env: node
+    rootDir: frontend
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: adrex-backend
+          property: url
+
+  # Team Portal
+  - type: web
+    name: adrex-team-portal
+    env: node
+    rootDir: team-portal
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: adrex-backend
+          property: url
+
+databases:
+  - name: adrex-db
+    databaseName: adrex_media
+    user: adrex
+    ipAllowList: []

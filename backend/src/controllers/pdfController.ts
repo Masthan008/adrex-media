@@ -60,14 +60,14 @@ export const generateInvoicePDF = async (req: Request, res: Response) => {
     doc.moveDown(0.5);
 
     doc.fontSize(10).font('Helvetica').text('Professional Services', 50, doc.y, { width: 300 });
-    doc.text(`$${invoice.amount.toLocaleString()}`, 450, doc.y, { width: 100, align: 'right' });
+    doc.text(`₹${invoice.amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 100, align: 'right' });
     doc.moveDown(1);
 
     doc.lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown(0.5);
 
     doc.fontSize(14).font('Helvetica-Bold').text('Total:', 400, doc.y, { width: 50 });
-    doc.text(`$${invoice.amount.toLocaleString()}`, 450, doc.y, { width: 100, align: 'right' });
+    doc.text(`₹${invoice.amount.toLocaleString('en-IN')}`, 450, doc.y, { width: 100, align: 'right' });
 
     doc.moveDown(2);
     doc.fontSize(8).font('Helvetica').text('Thank you for your business! - Adrex Media', { align: 'center' });
@@ -112,19 +112,19 @@ export const generateReportPDF = async (req: Request, res: Response) => {
     doc.text(`Active Campaigns: ${campaigns.filter(c => c.status === 'ACTIVE').length}`);
     doc.text(`Total Clients: ${clients.length}`);
     doc.text(`Total Influencers: ${influencers}`);
-    doc.text(`Total Revenue: $${totalRevenue.toLocaleString()}`);
-    doc.text(`Total Budget: $${totalBudget.toLocaleString()}`);
+    doc.text(`Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}`);
+    doc.text(`Total Budget: ₹${totalBudget.toLocaleString('en-IN')}`);
     doc.moveDown(1);
 
     doc.fontSize(14).font('Helvetica-Bold').text('Campaigns');
     campaigns.forEach(c => {
-      doc.fontSize(10).text(`- ${c.name} (${c.status}) - $${(c.budget || 0).toLocaleString()}`);
+      doc.fontSize(10).text(`- ${c.name} (${c.status}) - ₹${(c.budget || 0).toLocaleString('en-IN')}`);
     });
     doc.moveDown(1);
 
     doc.fontSize(14).font('Helvetica-Bold').text('Clients');
     clients.forEach(c => {
-      doc.fontSize(10).text(`- ${c.companyName} - $${(c.monthlyBudget || 0).toLocaleString()}/month`);
+      doc.fontSize(10).text(`- ${c.companyName} - ₹${(c.monthlyBudget || 0).toLocaleString('en-IN')}/month`);
     });
 
     doc.moveDown(2);

@@ -41,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm shadow-xl">
         <p className="text-zinc-400 mb-1">{label}</p>
         {payload.map((p: any, i: number) => (
-          <p key={i} style={{ color: p.color }} className="font-semibold">{p.name}: {typeof p.value === 'number' && p.name !== 'roas' ? `$${p.value.toLocaleString()}` : p.value}</p>
+          <p key={i} style={{ color: p.color }} className="font-semibold">{p.name}: {typeof p.value === 'number' && p.name !== 'roas' ? `₹${p.value.toLocaleString('en-IN')}` : p.value}</p>
         ))}
       </div>
     );
@@ -97,7 +97,7 @@ export default function ReportsPage() {
             <BarChart data={monthlyData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
               <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="revenue" name="Revenue" fill="#8b5cf6" radius={[4,4,0,0]} />
               <Bar dataKey="expenses" name="Expenses" fill="#3b82f6" radius={[4,4,0,0]} />

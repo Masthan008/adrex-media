@@ -8,17 +8,36 @@ export const generateCampaignIdea = async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user || !user.agencyId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { clientName, industry, budget, goals } = req.body;
+    const { clientName, industry, budget, goals, prompt, context } = req.body;
 
-    if (!clientName || !industry) {
-      return res.status(400).json({ error: 'clientName and industry are required.' });
-    }
+    let promptText: string;
 
-    const prompt = `You are a world-class influencer marketing strategist. Generate a creative and detailed campaign brief for a client. Return ONLY a JSON object with no markdown or extra text.
+    if (prompt || context) {
+      const input = prompt || context;
+      promptText = `You are a world-class influencer marketing strategist. Based on the following request, generate a creative and detailed campaign brief. Return ONLY a JSON object with no markdown or extra text.
+
+Request: ${input}
+
+Return this exact JSON structure:
+{
+  "name": "Catchy campaign name (under 6 words)",
+  "tagline": "One-line campaign tagline",
+  "description": "A compelling 2-3 sentence description of the campaign concept.",
+  "targetAudience": "Specific audience description",
+  "recommendedPlatforms": ["platform1", "platform2"],
+  "contentPillars": ["pillar1", "pillar2", "pillar3"],
+  "kpis": ["KPI 1", "KPI 2", "KPI 3"]
+}`;
+    } else {
+      if (!clientName || !industry) {
+        return res.status(400).json({ error: 'clientName and industry are required.' });
+      }
+
+      promptText = `You are a world-class influencer marketing strategist. Generate a creative and detailed campaign brief for a client. Return ONLY a JSON object with no markdown or extra text.
 
 Client: ${clientName}
 Industry: ${industry}
-Budget: ${budget ? `$${budget}` : 'Not specified'}
+Budget: ${budget ? `₹${budget}` : 'Not specified'}
 Goals: ${goals || 'Brand awareness and conversions'}
 
 Return this exact JSON structure:
@@ -31,17 +50,17 @@ Return this exact JSON structure:
   "contentPillars": ["pillar1", "pillar2", "pillar3"],
   "kpis": ["KPI 1", "KPI 2", "KPI 3"]
 }`;
+    }
 
     const completion = await groq.chat.completions.create({
       model: 'llama3-70b-8192',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: promptText }],
       temperature: 0.8,
       max_tokens: 600,
     });
 
     const raw = completion.choices[0].message.content ?? '{}';
     
-    // Extract JSON from response
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ error: 'AI returned invalid response.' });
     

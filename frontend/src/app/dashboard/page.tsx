@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-zinc-900 border border-white/10 rounded-xl p-3 text-sm shadow-xl">
         <p className="text-zinc-400">{label}</p>
-        <p className="text-white font-semibold">${payload[0].value.toLocaleString()}</p>
+        <p className="text-white font-semibold">₹{payload[0].value.toLocaleString('en-IN')}</p>
       </div>
     );
   }
@@ -118,7 +118,7 @@ function DashboardContent() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff06" />
               <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fill: '#71717a', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} />
               <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#revenueGrad)" dot={false} activeDot={{ r: 5, fill: '#8b5cf6' }} />
             </AreaChart>

@@ -355,7 +355,7 @@ function SettingsContent() {
                 <div>
                   <span className="text-xs font-semibold text-purple-300 uppercase tracking-widest">Current Plan</span>
                   <h3 className="text-2xl font-bold text-white mt-1">Pro Agency</h3>
-                  <p className="text-sm text-zinc-400 mt-1">$149 / month · Billed annually</p>
+                  <p className="text-sm text-zinc-400 mt-1">₹12,375 / month · Billed annually</p>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Active</span>
               </div>
