@@ -3,6 +3,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+
 
 const prisma = new PrismaClient();
 
@@ -207,9 +210,6 @@ export const changePassword = async (req: Request, res: Response) => {
 };
 
 // --- NEW PHASE 7 AUTHENTICATION ENDPOINTS ---
-
-import nodemailer from 'nodemailer';
-import crypto from 'crypto';
 
 // Setup Nodemailer transport (for demo we use Ethereal or a placeholder)
 const transporter = nodemailer.createTransport({
