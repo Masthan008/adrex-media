@@ -17,7 +17,7 @@ export const setupSocketIO = (httpServer: HttpServer) => {
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
-  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(url => url.trim()) : []),
 ];
 
   const io = new SocketIOServer(httpServer, {
